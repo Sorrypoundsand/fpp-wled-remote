@@ -1,0 +1,1051 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="WLED Remote">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0e18">
+<title>WLED Remote</title>
+<style>
+:root{
+  --bg:#0a0e18; --card:#121829; --card2:#1a2236; --line:#273150; --text:#e9edf7; --dim:#8a94b2;
+  --accent:#ffc04a; --accent2:#ff7a45; --ok:#35d39a; --bad:#ff5a74; --r:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{padding-bottom:calc(150px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:5;background:rgba(10,14,24,.94);backdrop-filter:blur(10px);
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}
+header h1{font-size:17px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--bad);flex:none}
+.dot.ok{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+#activeBadge{font-size:12px;color:var(--accent);display:none}
+main{max-width:760px;margin:0 auto;padding:14px 16px}
+.view{display:none}.view.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.card h2{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin:0 0 10px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card h2 .sp{flex:1}
+.row{display:flex;gap:8px;align-items:center}
+.grow{flex:1;min-width:0}
+button{font:inherit;color:var(--text);background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 14px;cursor:pointer}
+button:active{transform:scale(.97)}
+button:disabled{opacity:.45}
+button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#1d0f00;border:none;font-weight:700}
+button.danger{background:#3b1420;border-color:#62223a;color:#ffc0cd}
+button.small{padding:6px 10px;font-size:13px;border-radius:9px}
+button.link{background:none;border:none;color:var(--accent);padding:4px 6px;font-size:13px}
+input[type=text],input[type=search],select{font:inherit;color:var(--text);background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:10px 12px;width:100%}
+input[type=range]{width:100%;accent-color:var(--accent);height:28px}
+input[type=color]{width:46px;height:40px;border:1px solid var(--line);border-radius:10px;background:var(--card2);padding:3px}
+.hint{color:var(--dim);font-size:13px;margin:6px 0 0}
+.empty{color:var(--dim);text-align:center;padding:14px;font-size:14px}
+/* targets */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--card2);border-radius:99px;padding:7px 12px;font-size:14px;cursor:pointer;user-select:none}
+.chip.sel{background:rgba(255,192,74,.16);border-color:var(--accent);color:#ffe2a6}
+.chip.grp{font-weight:600}
+.sect{font-size:12px;color:var(--dim);margin:12px 0 6px;display:flex;gap:8px;align-items:center}
+.sect:first-child{margin-top:0}
+#selSummary{font-size:13px;color:var(--accent)}
+/* effects */
+.efflist{max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--card2)}
+.eff{padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:8px;align-items:center}
+.eff:last-child{border-bottom:none}
+.eff.sel{background:rgba(255,192,74,.14);color:#ffe2a6}
+.eff small{color:var(--dim);margin-left:auto}
+.quick{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px;scrollbar-width:none}
+.quick .chip{white-space:nowrap}
+.ctl{margin:10px 0}
+.ctl label{display:flex;justify-content:space-between;font-size:14px;color:var(--dim);margin-bottom:2px}
+.ctl label b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+.colors{display:flex;gap:14px;flex-wrap:wrap}
+.colors .c{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;color:var(--dim)}
+.swatches{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.sw{width:30px;height:30px;border-radius:50%;border:2px solid rgba(255,255,255,.15);padding:0}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;font-size:14px;color:var(--dim)}
+.toggle input{width:22px;height:22px;accent-color:var(--accent)}
+.effTitle{font-size:20px;font-weight:700;margin:0 0 2px}
+details summary{cursor:pointer;color:var(--dim);font-size:13px;margin-top:6px}
+/* bottom bar */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:6;background:rgba(13,18,31,.97);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.dock .actions{display:flex;gap:8px;padding:8px 12px 6px;max-width:760px;margin:0 auto}
+.dock .actions button{flex:1;padding:13px 8px;font-size:15px}
+#stopAll{font-weight:800;letter-spacing:.3px}
+nav{display:flex;max-width:760px;margin:0 auto}
+nav button{flex:1;background:none;border:none;border-radius:10px;padding:6px 2px 8px;color:var(--dim);font-size:11px;display:flex;flex-direction:column;align-items:center;gap:1px}
+nav button .ic{font-size:19px;line-height:1.1}
+nav button.active{color:var(--accent)}
+/* show */
+.np{font-size:21px;font-weight:700;margin:4px 0 0;word-break:break-word}
+.sub{color:var(--dim);font-size:14px}
+.pill{display:inline-block;font-size:12px;padding:3px 10px;border-radius:99px;background:var(--card2);border:1px solid var(--line);text-transform:capitalize}
+.pill.on{background:rgba(53,211,154,.14);border-color:rgba(53,211,154,.5);color:var(--ok)}
+.bar{height:6px;background:var(--card2);border-radius:99px;overflow:hidden;margin:12px 0 4px}
+.bar>div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .9s linear}
+.times{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.list{display:flex;flex-direction:column;gap:6px}
+.item{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.item .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item.now{border-color:var(--accent)}
+.item small{color:var(--dim)}
+/* presets */
+.presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.preset{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:10px;cursor:pointer;display:flex;flex-direction:column;gap:6px;position:relative}
+.preset .stripe{height:24px;border-radius:7px;display:flex;overflow:hidden}
+.preset .stripe i{flex:1}
+.preset b{font-size:14px}
+.preset small{color:var(--dim);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.preset .more{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.35);border:none;border-radius:8px;padding:2px 8px;font-size:16px}
+#toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(12px);opacity:0;background:#222b46;border:1px solid var(--line);padding:10px 16px;border-radius:12px;z-index:9;transition:.2s;pointer-events:none;max-width:90vw;text-align:center;font-size:14px}
+#toast.show{opacity:1;transform:translateX(-50%)}
+#toast.err{border-color:var(--bad);color:#ffc6cf}
+[hidden]{display:none!important}
+/* ---------- grown-up extras ---------- */
+.lockbtn{font-size:13px;padding:7px 11px;border-radius:99px}
+.krowset{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.krowset select{width:64px;padding:6px;font-size:20px;text-align:center}
+.krowset input[type=text]{padding:8px 10px}
+.krowset .nm{font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
+.krowset input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none}
+
+/* ---------- KIDS MODE: big, bright, one screen ---------- */
+#kidsApp{--k-bg:#101735;--k-card:#1b2550;--k-line:#2f3d78;--k-sel:#ffd84a;--k-text:#ffffff;--k-dim:#b7c0ec;
+  background:radial-gradient(circle at 20% 0%,#24306b 0,var(--k-bg) 55%);min-height:100vh;color:var(--k-text);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:calc(120px + env(safe-area-inset-bottom))}
+.kh{display:flex;align-items:center;gap:10px;padding:calc(12px + env(safe-area-inset-top)) 16px 6px}
+.kh h1{flex:1;margin:0;font-size:22px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kh .lockbtn{background:rgba(255,255,255,.08);border-color:var(--k-line);color:var(--k-dim)}
+.kmain{max-width:640px;margin:0 auto;padding:6px 14px;display:flex;flex-direction:column;gap:14px}
+.kcard{background:var(--k-card);border:2px solid var(--k-line);border-radius:24px;padding:14px}
+.kcard h2{margin:0 0 10px;font-size:22px;font-weight:800;display:flex;align-items:center;gap:8px}
+.kcard h2 .n{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--k-sel);color:#2a1d00;font-size:18px}
+.ktiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+.ktile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:96px;
+  background:rgba(255,255,255,.06);border:3px solid transparent;border-radius:20px;color:var(--k-text);font:inherit;font-weight:700;font-size:15px;line-height:1.15;padding:8px 4px;text-align:center}
+.ktile .ki{font-size:40px;line-height:1.1}
+.ktile.sel{border-color:var(--k-sel);background:rgba(255,216,74,.16);box-shadow:0 0 18px rgba(255,216,74,.35)}
+.ktile .heart{position:absolute;top:2px;right:2px;font-size:18px;background:none;border:none;padding:6px;opacity:.45}
+.ktile .heart.on{opacity:1}
+.wheelwrap{position:relative;width:min(300px,78vw);aspect-ratio:1;margin:4px auto 12px;touch-action:none}
+#wheel{width:100%;height:100%;border-radius:50%;box-shadow:0 0 0 6px rgba(255,255,255,.08),0 0 40px rgba(0,0,0,.4)}
+#wheelDot{position:absolute;width:38px;height:38px;border-radius:50%;border:5px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.6);transform:translate(-50%,-50%);pointer-events:none}
+.krow{display:flex;gap:10px;flex-wrap:wrap}
+.kbtn{flex:1;min-width:90px;font:inherit;font-weight:800;font-size:18px;color:var(--k-text);background:rgba(255,255,255,.07);border:3px solid transparent;border-radius:18px;padding:12px 8px}
+.kbtn .ki{font-size:30px;display:block}
+.kbtn.sel{border-color:var(--k-sel);background:rgba(255,216,74,.16)}
+.kdock{position:fixed;left:0;right:0;bottom:0;padding:10px 16px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--k-bg) 35%)}
+.kstop{display:block;width:100%;max-width:640px;margin:0 auto;font:inherit;font-weight:900;font-size:26px;letter-spacing:1px;color:#fff;
+  background:linear-gradient(135deg,#ff4d6d,#e01e37);border:none;border-radius:22px;padding:16px;box-shadow:0 6px 24px rgba(224,30,55,.45)}
+.knote{color:var(--k-dim);font-size:15px;margin:2px 0 0}
+@keyframes wiggle{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.wiggle{animation:wiggle .25s 2}
+@media (prefers-reduced-motion:reduce){.wiggle{animation:none}}
+/* PIN pad */
+#pinPad{position:fixed;inset:0;z-index:20;background:rgba(5,8,18,.92);display:flex;align-items:center;justify-content:center;padding:20px}
+#pinPad .box{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:20px;width:min(320px,100%);text-align:center}
+#pinPad h3{margin:0 0 4px;font-size:18px}
+.pindots{display:flex;justify-content:center;gap:14px;margin:14px 0 18px}
+.pindots i{width:16px;height:16px;border-radius:50%;border:2px solid var(--dim)}
+.pindots i.on{background:var(--accent);border-color:var(--accent)}
+.pinkeys{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pinkeys button{font-size:24px;padding:14px 0;font-weight:600}
+</style>
+</head>
+<body>
+<!-- ================= KIDS MODE ================= -->
+<div id="kidsApp" hidden>
+  <div class="kh">
+    <span class="dot" id="kdot"></span>
+    <h1 id="ktitle">Light Show</h1>
+    <button class="lockbtn" id="unlockBtn" type="button">🔒 Grown-ups</button>
+  </div>
+  <div class="kmain">
+    <section class="kcard"><h2><span class="n">1</span> Where?</h2><div class="ktiles" id="kZones"></div></section>
+    <section class="kcard">
+      <h2><span class="n">2</span> Pick a color</h2>
+      <div class="wheelwrap" id="wheelWrap"><canvas id="wheel" width="480" height="480"></canvas><span id="wheelDot"></span></div>
+      <div class="krow" id="kColorBtns">
+        <button class="kbtn" data-kc="rainbow" type="button"><span class="ki">🌈</span>Rainbow</button>
+        <button class="kbtn" data-kc="#ffffff" type="button"><span class="ki">⚪</span>White</button>
+        <button class="kbtn" data-kc="#ffb46b" type="button"><span class="ki">🕯️</span>Warm</button>
+      </div>
+    </section>
+    <section class="kcard"><h2><span class="n">3</span> Pick a magic</h2><div class="ktiles" id="kEffects"></div>
+      <p class="knote">Tap ❤️ to keep your favorites first.</p></section>
+    <section class="kcard">
+      <h2>How fast?</h2>
+      <div class="krow" id="kSpeed">
+        <button class="kbtn" data-ks="slow" type="button"><span class="ki">🐢</span>Slow</button>
+        <button class="kbtn" data-ks="mid" type="button"><span class="ki">🐇</span>Medium</button>
+        <button class="kbtn" data-ks="fast" type="button"><span class="ki">🚀</span>Fast</button>
+      </div>
+      <h2 style="margin-top:14px">How bright?</h2>
+      <div class="krow" id="kBright">
+        <button class="kbtn" data-kb="low" type="button"><span class="ki">🌙</span>Soft</button>
+        <button class="kbtn" data-kb="high" type="button"><span class="ki">☀️</span>Bright</button>
+      </div>
+    </section>
+  </div>
+  <div class="kdock"><button class="kstop" id="kStop" type="button">✋ STOP</button></div>
+</div>
+
+<!-- PIN pad for grown-ups -->
+<div id="pinPad" hidden>
+  <div class="box">
+    <h3>Grown-ups only</h3>
+    <div class="sub" id="pinMsg">Enter the 4-digit PIN</div>
+    <div class="pindots" id="pinDots"><i></i><i></i><i></i><i></i></div>
+    <div class="pinkeys" id="pinKeys">
+      <button type="button">1</button><button type="button">2</button><button type="button">3</button>
+      <button type="button">4</button><button type="button">5</button><button type="button">6</button>
+      <button type="button">7</button><button type="button">8</button><button type="button">9</button>
+      <button type="button" data-k="cancel" style="font-size:15px">Cancel</button><button type="button">0</button><button type="button" data-k="back">⌫</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= GROWN-UP APP ================= -->
+<div id="parentApp">
+<header>
+  <span class="dot" id="dot"></span>
+  <h1 id="title">WLED Remote</h1>
+  <span id="activeBadge"></span>
+  <button class="lockbtn" id="lockBtn" type="button" hidden>🔓 Log out</button>
+</header>
+
+<main>
+<!-- ============ EFFECTS ============ -->
+<section class="view active" id="v-effects">
+  <div class="card">
+    <h2>1 · Lights <span class="sp"></span><span id="selSummary"></span><button class="link" id="clearSel">Clear</button></h2>
+    <input type="search" id="targetSearch" placeholder="Search props and groups…">
+    <div id="targets" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <h2>2 · Effect</h2>
+    <div class="quick" id="quick"></div>
+    <input type="search" id="effSearch" placeholder="Search 200+ effects…">
+    <div class="efflist" id="effList" style="margin-top:8px"></div>
+    <label class="toggle" style="margin-top:6px">Show sound-reactive (♪) effects <input type="checkbox" id="showSound"></label>
+  </div>
+
+  <div class="card" id="ctlCard">
+    <h2>3 · Adjust <span class="sp"></span><label class="toggle" style="padding:0;text-transform:none;letter-spacing:0;font-size:13px">Live <input type="checkbox" id="live" checked></label></h2>
+    <div class="effTitle" id="effTitle">Pick an effect</div>
+    <div id="controls"></div>
+    <details>
+      <summary>Advanced</summary>
+      <div class="ctl">
+        <label>How it mixes with the show</label>
+        <select id="autoEnable">
+          <option value="Enabled">Replace the show on these lights</option>
+          <option value="Transparent">Blend over the show (black = show through)</option>
+          <option value="Transparent RGB">Blend over the show (per color channel)</option>
+        </select>
+      </div>
+    </details>
+    <div class="row" style="margin-top:12px">
+      <button class="primary grow" id="goBtn">▶ Run effect</button>
+      <button class="grow" id="stopSelBtn">Stop on these</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <input type="text" id="presetName" placeholder="Preset name" class="grow">
+      <button id="savePresetBtn">★ Save</button>
+    </div>
+    <button id="addKidsBtn" style="width:100%;margin-top:8px">👧 Add this effect to Kids mode</button>
+  </div>
+</section>
+
+<!-- ============ SHOW ============ -->
+<section class="view" id="v-show">
+  <div class="card">
+    <div class="row"><span class="pill" id="stPill">idle</span><span class="grow"></span><span class="sub" id="stMode"></span></div>
+    <div class="np" id="stTitle">Nothing playing</div>
+    <div class="sub" id="stSub">—</div>
+    <div class="bar"><div id="stBar"></div></div>
+    <div class="times"><span id="stEl">0:00</span><span id="stRem">-0:00</span></div>
+    <div class="row" style="margin-top:12px">
+      <select id="plSelect" class="grow"></select>
+    </div>
+    <label class="toggle">Repeat <input type="checkbox" id="plRepeat"></label>
+    <div class="grid3">
+      <button class="primary" id="plStart">▶ Start</button>
+      <button id="plStopG" title="Stop when the current song ends">⏹ After song</button>
+      <button class="danger" id="plStop">✋ Stop now</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>In this playlist</h2>
+    <div class="list" id="plItems"></div>
+  </div>
+  <div class="card" id="nextCard" style="display:none">
+    <h2>Next on the schedule</h2>
+    <div class="sub" id="nextInfo"></div>
+  </div>
+</section>
+
+<!-- ============ PRESETS ============ -->
+<section class="view" id="v-presets">
+  <div class="card">
+    <h2>Presets <span class="sp"></span><button class="link" id="reloadPresets">Refresh</button></h2>
+    <div class="presets" id="presets"></div>
+    <p class="hint">Tap to run. ⋯ to rename or delete. Presets are saved on the Pi, so every phone sees the same ones. Save new ones from the Effects tab.</p>
+  </div>
+</section>
+
+<!-- ============ KIDS SETUP ============ -->
+<section class="view" id="v-kids">
+  <div class="card">
+    <h2>Kids mode</h2>
+    <p class="sub" id="kPinState" style="margin:0 0 10px"></p>
+    <div class="row">
+      <input type="text" id="kPin1" inputmode="numeric" maxlength="4" placeholder="New 4-digit PIN" autocomplete="off" class="grow">
+      <input type="text" id="kPin2" inputmode="numeric" maxlength="4" placeholder="Again" autocomplete="off" class="grow">
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="primary grow" id="kSavePin" type="button">Save PIN</button>
+      <button class="grow" id="kTry" type="button">🔓 Log out to Kids mode</button>
+    </div>
+    <p class="hint">Once a PIN is set, any phone or tablet opens in Kids mode until someone enters the PIN on it. After that, that device stays in grown-up mode, even after closing the browser, until you tap 🔓 Log out. Changing the PIN logs out every other device. This is a kid lock, not real security: anyone with your FPP web password can still get in.</p>
+  </div>
+  <div class="card">
+    <h2>Brightness limit <span class="sp"></span><b id="kMaxVal" style="color:var(--text)"></b></h2>
+    <input type="range" id="kMax" min="10" max="100" step="5">
+    <p class="hint">The brightest the kids can go. “Soft” is about a third of this.</p>
+  </div>
+  <div class="card">
+    <h2>Lights the kids can use</h2>
+    <div class="list" id="kZoneSetup"></div>
+    <details style="margin-top:8px"><summary>Add a single prop</summary>
+      <div class="row" style="margin-top:8px"><select id="kAddProp" class="grow"></select><button id="kAddPropBtn" type="button">Add</button></div>
+    </details>
+  </div>
+  <div class="card">
+    <h2>Effects the kids can use</h2>
+    <div class="list" id="kEffSetup"></div>
+    <p class="hint">Kids' color, speed and brightness buttons change each effect. Everything else comes from how the effect was set up when you added it. To add one, set it up on the Effects tab and tap “Add this effect to Kids mode”.</p>
+  </div>
+  <button class="primary" id="kSaveAll" type="button" style="width:100%;margin-bottom:12px">Save Kids settings</button>
+</section>
+</main>
+
+<div class="dock">
+  <div class="actions">
+    <button class="danger" id="stopAll">■ STOP ALL EFFECTS</button>
+  </div>
+  <nav id="nav">
+    <button class="active" data-v="effects"><span class="ic">✨</span>Effects</button>
+    <button data-v="show"><span class="ic">🎄</span>Show</button>
+    <button data-v="presets"><span class="ic">★</span>Presets</button>
+    <button data-v="kids"><span class="ic">👧</span>Kids</button>
+  </nav>
+</div>
+</div><!-- /parentApp -->
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ================= basics ================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pretty = n => String(n).replace(/_/g, ' ');
+const local = {
+  get(k, d){ try{ const v = localStorage.getItem('wr_' + k); return v == null ? d : JSON.parse(v) }catch{ return d } },
+  set(k, v){ try{ localStorage.setItem('wr_' + k, JSON.stringify(v)) }catch{} }
+};
+// The page is served at <prefix>plugin.php?... ; the prefix also covers FPP's /proxy/<host>/ path.
+const BASE = location.pathname.replace(/plugin\.php.*$/, '').replace(/\/$/, '');
+const PRESET_FILE = 'fpp-wled-remote-presets.json';
+
+let toastT;
+function toast(msg, err){
+  const t = $('#toast'); t.textContent = msg; t.className = 'show' + (err ? ' err' : '');
+  clearTimeout(toastT); toastT = setTimeout(() => t.className = '', err ? 4000 : 1800);
+}
+async function api(path, opts = {}){
+  const r = await fetch(BASE + path, { cache: 'no-store', ...opts,
+    headers: opts.body !== undefined ? { 'Content-Type': 'application/json' } : undefined });
+  const txt = await r.text();
+  let data; try { data = JSON.parse(txt) } catch { data = txt }
+  if (!r.ok){
+    const msg = (data && (data.message || data.Message || data.error)) || (typeof data === 'string' && data.slice(0, 120)) || r.statusText;
+    throw new Error(msg || ('HTTP ' + r.status));
+  }
+  return data;
+}
+const post = (path, body) => api(path, { method: 'POST', body: body === undefined ? '' : JSON.stringify(body) });
+const command = (name, args) => post('/api/command', { command: name, args: args.map(String) });
+
+/* ================= state ================= */
+const S = {
+  props: [], groups: [], subs: [],
+  sel: new Set(local.get('sel', [])),
+  effects: {},          // name -> description {name,args}
+  effNames: [],
+  effect: local.get('effect', null),
+  values: local.get('values', {}),   // effect name -> {argName: value}
+  touched: new Set(local.get('touched', [])), // non-model targets the app has run effects on
+  running: false,
+  presets: [],
+  playlist: null
+};
+const SOLID = 'Solid Color';
+const QUICK = ['Solid Color','WLED - Twinkle','WLED - Fairy','WLED - Candle Multi','WLED - Glitter','WLED - Colorwaves','WLED - Chase','WLED - Running','WLED - Rainbow','WLED - Fireworks','WLED - Meteor','WLED - Lightning','WLED - Breathe','WLED - Fire 2012','WLED - Sparkle','WLED - Twinklefox'];
+const SWATCH = ['#ff0000','#00c832','#ffffff','#ffb46b','#0040ff','#ffd000','#ff6a00','#b000ff','#ff2d8a','#00e0ff','#000000'];
+
+/* ================= targets ================= */
+async function loadTargets(){
+  const [props, groups, subs] = await Promise.allSettled([
+    api('/api/models?simple=true'),
+    api('/api/configfile/xlights-modelgroups.json'),
+    api('/api/configfile/xlights-submodels.json')
+  ]);
+  S.props = props.status === 'fulfilled' && Array.isArray(props.value) ? props.value.filter(n => n !== '--All Models--') : [];
+  const fix = n => String(n).replace(/\//g, '_'); // same rename FPP applies
+  S.groups = groups.status === 'fulfilled' ? ((groups.value && groups.value.modelgroups) || [])
+    .filter(g => g && g.Name && g.BufferStyle !== 'polar').map(g => fix(g.Name)) : [];
+  S.subs = subs.status === 'fulfilled' ? ((subs.value && subs.value.submodels) || []).filter(s => s && s.Name).map(s => fix(s.Name)) : [];
+  const nat = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+  S.props.sort(nat); S.groups.sort((a, b) => a === 'All' ? -1 : b === 'All' ? 1 : nat(a, b)); S.subs.sort(nat);
+  const known = new Set([...S.props, ...S.groups, ...S.subs]);
+  S.sel = new Set([...S.sel].filter(n => known.has(n)));
+  renderTargets();
+}
+function renderTargets(){
+  const q = $('#targetSearch').value.trim().toLowerCase();
+  const f = list => list.filter(n => pretty(n).toLowerCase().includes(q));
+  const chip = (n, cls) => `<span class="chip ${cls}${S.sel.has(n) ? ' sel' : ''}" data-t="${esc(n)}">${esc(pretty(n))}</span>`;
+  const g = f(S.groups), p = f(S.props), s = f(S.subs);
+  let h = '';
+  if (g.length) h += `<div class="sect">Groups (${g.length})</div><div class="chips">${g.map(n => chip(n, 'grp')).join('')}</div>`;
+  if (p.length){
+    const nSel = p.filter(n => S.sel.has(n)).length;
+    const open = q || S.propsOpen || (nSel && S.propsOpen !== false);
+    h += `<details id="propsBox" ${open ? 'open' : ''}><summary>Props (${p.length})${nSel ? ` · ${nSel} selected` : ''}</summary>
+      <div class="sect"><button class="link" data-all="props">select all props</button></div>
+      <div class="chips">${p.map(n => chip(n, '')).join('')}</div></details>`;
+  }
+  if (s.length) h += `<details ${q ? 'open' : ''}><summary>Submodels (${s.length})</summary><div class="chips" style="margin-top:6px">${s.map(n => chip(n, '')).join('')}</div></details>`;
+  $('#targets').innerHTML = h || '<div class="empty">No props found. Upload models to FPP from xLights.</div>';
+  const n = S.sel.size;
+  $('#selSummary').textContent = n ? `${n} selected` : '';
+}
+$('#targets').addEventListener('click', e => {
+  const all = e.target.closest('[data-all]');
+  if (all){ S.props.forEach(n => S.sel.add(n)); return selChanged() }
+  const c = e.target.closest('[data-t]'); if (!c) return;
+  const n = c.dataset.t; S.sel.has(n) ? S.sel.delete(n) : S.sel.add(n);
+  selChanged();
+});
+$('#targets').addEventListener('toggle', e => { if (e.target.id === 'propsBox') S.propsOpen = e.target.open }, true);
+$('#clearSel').onclick =() => { S.sel.clear(); selChanged() };
+$('#targetSearch').oninput = renderTargets;
+function selChanged(){ local.set('sel', [...S.sel]); renderTargets(); S.running = false; updateGo() }
+
+/* ================= effects ================= */
+async function loadEffects(){
+  let list = [];
+  try{ list = await api('/api/overlays/effects?full=true') }catch(e){ toast('Could not load effects: ' + e.message, true) }
+  S.effects = {};
+  for (const e of (Array.isArray(list) ? list : [])) if (e && e.name && e.name !== 'Stop Effects' && e.name !== 'Image') S.effects[e.name] = e;
+  // Built-in solid fill (Overlay Model Fill), shown alongside the effects.
+  S.effects[SOLID] = { name: SOLID, args: [
+    { name: 'Color', type: 'color', default: '#FF0000' },
+    { name: 'Brightness', type: 'range', min: 0, max: 100, default: '100' } ] };
+  const rank = n => n === SOLID ? 0 : n.startsWith('WLED - ') ? 1 : n.startsWith('WLED♪') ? 3 : 2;
+  S.effNames = Object.keys(S.effects).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+  if (!S.effect || !S.effects[S.effect]) S.effect = S.effects['WLED - Twinkle'] ? 'WLED - Twinkle' : SOLID;
+  renderQuick(); renderEffList(); renderControls();
+}
+const effLabel = n => n.replace(/^WLED♪? - /, '');
+function renderQuick(){
+  $('#quick').innerHTML = QUICK.filter(n => S.effects[n]).map(n =>
+    `<span class="chip${n === S.effect ? ' sel' : ''}" data-e="${esc(n)}">${esc(effLabel(n))}</span>`).join('');
+}
+function renderEffList(){
+  const q = $('#effSearch').value.trim().toLowerCase(), sound = $('#showSound').checked;
+  const names = S.effNames.filter(n => (sound || !n.startsWith('WLED♪')) && n.toLowerCase().includes(q));
+  $('#effList').innerHTML = names.map(n => `<div class="eff${n === S.effect ? ' sel' : ''}" data-e="${esc(n)}">
+    <span>${esc(effLabel(n))}</span><small>${n.startsWith('WLED♪') ? '♪ sound' : n.startsWith('WLED') ? '' : n === SOLID ? 'solid' : 'FPP'}</small></div>`).join('')
+    || '<div class="empty">No effects match</div>';
+}
+function pickEffect(n){
+  if (!S.effects[n]) return;
+  S.effect = n; local.set('effect', n);
+  renderQuick(); renderEffList(); renderControls();
+  const el = $('#effList .eff.sel'); if (el) el.scrollIntoView({ block: 'nearest' });
+  if (S.running && $('#live').checked) scheduleSend();
+}
+$('#quick').onclick = $('#effList').onclick = e => { const x = e.target.closest('[data-e]'); if (x) pickEffect(x.dataset.e) };
+$('#effSearch').oninput = renderEffList;
+$('#showSound').onchange = renderEffList;
+
+/* ---------- controls built from the effect's own description ---------- */
+const NICE = { BufferMapping: 'Direction', brightness: 'Brightness', palette: 'Palette', color1: 'Color 1', color2: 'Color 2', color3: 'Color 3' };
+function argDefault(a){
+  if (a.default !== undefined && a.default !== '') return String(a.default);
+  if (a.contents && a.contents.length) return String(a.contents[0]);
+  if (a.type === 'range' || a.type === 'int') return String(a.min ?? 0);
+  if (a.type === 'color') return '#000000';
+  if (a.type === 'bool') return 'false';
+  return '';
+}
+function curValues(name){
+  const d = S.effects[name], saved = S.values[name] || {}, out = {};
+  for (const a of d.args) out[a.name] = saved[a.name] !== undefined ? String(saved[a.name]) : argDefault(a);
+  return out;
+}
+const boolOn = v => v === '1' || v === 'true';
+const boolStr = (a, on) => (/^(true|false)$/i.test(String(a.default)) ? (on ? 'true' : 'false') : (on ? '1' : '0'));
+function showVal(a, v){
+  if (a.name === 'brightness' && a.max == 255) return Math.round(v / 255 * 100) + '%';
+  if (a.name === 'Brightness' && a.max == 100) return v + '%';
+  return v;
+}
+function renderControls(){
+  const d = S.effects[S.effect]; if (!d){ $('#controls').innerHTML = ''; return }
+  $('#effTitle').textContent = effLabel(d.name);
+  const v = curValues(d.name);
+  // Order: brightness first, then sliders, colors, palette, switches, the rest.
+  const order = a => /^brightness$/i.test(a.name) ? 0 : (a.type === 'range' || a.type === 'int') ? 1 : a.type === 'color' ? 2 : a.name === 'palette' ? 3 : a.type === 'bool' ? 4 : 5;
+  const args = d.args.map((a, i) => ({ a, i })).sort((x, y) => order(x.a) - order(y.a) || x.i - y.i).map(x => x.a);
+  const colors = args.filter(a => a.type === 'color');
+  let h = '', colorsDone = false;
+  for (const a of args){
+    const label = esc(NICE[a.name] || a.description || a.name), key = esc(a.name), val = v[a.name];
+    if (a.type === 'range' || a.type === 'int'){
+      h += `<div class="ctl"><label>${label}<b data-out="${key}">${esc(showVal(a, val))}</b></label>
+        <input type="range" data-arg="${key}" min="${a.min ?? 0}" max="${a.max ?? 255}" value="${esc(val)}"></div>`;
+    } else if (a.type === 'color'){
+      if (colorsDone) continue; colorsDone = true;
+      h += `<div class="ctl"><label>Colors</label><div class="colors">${colors.map(c =>
+        `<div class="c"><input type="color" data-arg="${esc(c.name)}" value="${esc(String(v[c.name]).slice(0, 7).toLowerCase())}">${esc(NICE[c.name] || c.description || c.name)}</div>`).join('')}</div>
+        <div class="swatches">${SWATCH.map(s => `<button class="sw" style="background:${s}" data-sw="${s}" title="${s}"></button>`).join('')}</div>
+        <p class="hint" style="margin-top:4px">Tap a color box, then a swatch to fill it fast.</p></div>`;
+    } else if (a.type === 'bool'){
+      h += `<label class="toggle">${label}<input type="checkbox" data-arg="${key}" ${boolOn(val) ? 'checked' : ''}></label>`;
+    } else if (a.contents && a.contents.length){
+      h += `<div class="ctl"><label>${label}</label><select data-arg="${key}">${a.contents.map(o =>
+        `<option${String(o) === val ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></div>`;
+    } else {
+      h += `<div class="ctl"><label>${label}</label><input type="text" data-arg="${key}" value="${esc(val)}"></div>`;
+    }
+  }
+  $('#controls').innerHTML = h;
+  lastColor = null;
+  updateGo();
+}
+let lastColor = null;
+function setArg(name, value){
+  const d = S.effects[S.effect];
+  S.values[d.name] = { ...curValues(d.name), [name]: String(value) };
+  local.set('values', S.values);
+  const a = d.args.find(x => x.name === name);
+  const out = document.querySelector(`[data-out="${CSS.escape(name)}"]`);
+  if (out && a) out.textContent = showVal(a, value);
+  if (S.running && $('#live').checked) scheduleSend();
+}
+$('#controls').addEventListener('input', e => {
+  const el = e.target.closest('[data-arg]'); if (!el) return;
+  const d = S.effects[S.effect], a = d.args.find(x => x.name === el.dataset.arg);
+  if (el.type === 'color') lastColor = el;
+  setArg(el.dataset.arg, el.type === 'checkbox' ? boolStr(a, el.checked) : el.value);
+});
+$('#controls').addEventListener('focusin', e => { if (e.target.type === 'color') lastColor = e.target });
+$('#controls').addEventListener('click', e => {
+  const sw = e.target.closest('[data-sw]'); if (!sw) return;
+  const target = lastColor || $('#controls input[type=color]'); if (!target) return;
+  target.value = sw.dataset.sw; setArg(target.dataset.arg, sw.dataset.sw);
+});
+
+/* ---------- running effects ---------- */
+function targets(){ return [...S.sel] }
+function scale(hex, pct){
+  const n = parseInt(hex.slice(1, 7), 16), f = pct / 100;
+  return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(c => Math.round(c * f).toString(16).padStart(2, '0')).join('');
+}
+function buildCall(effectName, vals, models, autoEnable){
+  if (effectName === SOLID)
+    return ['Overlay Model Fill', [models.join(','), 'Enabled', scale(vals.Color || '#ff0000', +(vals.Brightness ?? 100))]];
+  const d = S.effects[effectName];
+  return ['Overlay Model Effect', [models.join(','), autoEnable, effectName, ...d.args.map(a => vals[a.name] ?? argDefault(a))]];
+}
+function remember(models){
+  const plain = new Set(S.props);
+  models.filter(m => !plain.has(m)).forEach(m => S.touched.add(m));
+  local.set('touched', [...S.touched]);
+}
+async function runCurrent(quiet){
+  const models = targets();
+  if (!models.length){ toast('Pick at least one prop or group', true); return false }
+  const [cmd, args] = buildCall(S.effect, curValues(S.effect), models, $('#autoEnable').value);
+  try{
+    await command(cmd, args); remember(models);
+    S.running = true; updateGo();
+    if (!quiet) toast('▶ ' + effLabel(S.effect)); setTimeout(pollActive, 600);
+    return true;
+  }catch(e){ toast('FPP said: ' + e.message, true); return false }
+}
+let sendT, sending = false, resend = false;
+function scheduleSend(){
+  clearTimeout(sendT);
+  sendT = setTimeout(async () => {
+    if (sending){ resend = true; return }
+    sending = true; await runCurrent(true); sending = false;
+    if (resend){ resend = false; scheduleSend() }
+  }, 220);
+}
+function updateGo(){
+  $('#goBtn').textContent = S.running ? '↻ Running — update' : '▶ Run effect';
+}
+$('#goBtn').onclick = () => runCurrent(false);
+$('#live').onchange = () => { if (!$('#live').checked) S.running = false; updateGo() };
+
+async function stopOn(models){
+  if (!models.length) return;
+  await command('Overlay Model Effect', [models.join(','), 'Enabled', 'Stop Effects']);
+}
+$('#stopSelBtn').onclick = async () => {
+  const m = targets(); if (!m.length) return toast('Nothing selected', true);
+  try{ await stopOn(m); S.running = false; updateGo(); toast('Stopped on ' + m.length); setTimeout(pollActive, 600) }
+  catch(e){ toast('FPP said: ' + e.message, true) }
+};
+async function stopEverything(){
+  // Every loaded model, then any group/submodel this app has used (groups load on demand).
+  await stopOn(['--All Models--']);
+  const extra = [...S.touched];
+  if (extra.length) await stopOn(extra).catch(() => {});
+  S.running = false; updateGo(); setTimeout(pollActive, 700);
+}
+$('#stopAll').onclick = async () => {
+  try{ await stopEverything(); toast('■ All effects stopped') }
+  catch(e){ toast('Stop failed: ' + e.message, true) }
+};
+
+/* ================= presets (stored on the Pi) ================= */
+async function loadPresets(){
+  try{
+    const d = await api('/api/configfile/' + PRESET_FILE);
+    S.presets = Array.isArray(d && d.presets) ? d.presets : [];
+  }catch{ S.presets = S.presets || [] }
+  renderPresets();
+}
+async function savePresets(){
+  await post('/api/configfile/' + PRESET_FILE, { version: 1, presets: S.presets });
+}
+function presetColors(p){
+  const c = Object.entries(p.values || {}).filter(([k, v]) => /^#[0-9a-f]{6}/i.test(v) && /colou?r/i.test(k)).map(([, v]) => v.slice(0, 7));
+  return c.length ? c : ['#666666'];
+}
+function renderPresets(){
+  $('#presets').innerHTML = S.presets.length ? S.presets.map((p, i) => `<div class="preset" data-p="${i}">
+      <button class="more" data-more="${i}" aria-label="Options">⋯</button>
+      <div class="stripe">${presetColors(p).map(c => `<i style="background:${c}"></i>`).join('')}</div>
+      <b>${esc(p.name)}</b><small>${esc(effLabel(p.effect))} · ${esc(p.targets.map(pretty).join(', '))}</small></div>`).join('')
+    : '<div class="empty" style="grid-column:1/-1">No presets yet. Set up a look on the Effects tab and tap ★ Save.</div>';
+}
+$('#savePresetBtn').onclick = async () => {
+  const name = $('#presetName').value.trim();
+  if (!name) return toast('Type a name for the preset', true);
+  if (!S.sel.size) return toast('Pick some lights first', true);
+  const p = { name, targets: targets(), effect: S.effect, values: curValues(S.effect), autoEnable: $('#autoEnable').value };
+  await loadPresets();
+  const i = S.presets.findIndex(x => x.name.toLowerCase() === name.toLowerCase());
+  if (i >= 0 && !confirm(`Replace the preset “${S.presets[i].name}”?`)) return;
+  i >= 0 ? S.presets[i] = p : S.presets.push(p);
+  try{ await savePresets(); $('#presetName').value = ''; renderPresets(); toast('★ Saved “' + name + '”') }
+  catch(e){ toast('Save failed: ' + e.message, true) }
+};
+$('#presets').addEventListener('click', async e => {
+  const more = e.target.closest('[data-more]');
+  if (more){
+    const i = +more.dataset.more, p = S.presets[i];
+    const n = prompt(`Rename “${p.name}”, or clear the name to delete it:`, p.name);
+    if (n === null) return;
+    if (n.trim()) p.name = n.trim(); else if (confirm(`Delete “${p.name}”?`)) S.presets.splice(i, 1); else return;
+    try{ await savePresets(); renderPresets() }catch(err){ toast('Save failed: ' + err.message, true) }
+    return;
+  }
+  const card = e.target.closest('[data-p]'); if (!card) return;
+  const p = S.presets[+card.dataset.p];
+  if (!S.effects[p.effect]) return toast(`This FPP doesn't have “${p.effect}”`, true);
+  const vals = { ...curValues(p.effect), ...p.values };   // matched by name, so presets survive FPP changes
+  const known = new Set([...S.props, ...S.groups, ...S.subs]);
+  const models = p.targets.filter(m => known.has(m));
+  if (!models.length) return toast('None of this preset\'s lights exist any more', true);
+  try{
+    const [cmd, args] = buildCall(p.effect, vals, models, p.autoEnable || 'Enabled');
+    await command(cmd, args); remember(models);
+    // Load it into the Effects tab so it can be tweaked.
+    S.sel = new Set(models); local.set('sel', [...S.sel]);
+    S.values[p.effect] = vals; local.set('values', S.values);
+    $('#autoEnable').value = p.autoEnable || 'Enabled';
+    S.effect = p.effect; local.set('effect', p.effect);
+    renderTargets(); renderQuick(); renderEffList(); renderControls();
+    S.running = true; updateGo();
+    toast('★ ' + p.name); setTimeout(pollActive, 600);
+  }catch(err){ toast('FPP said: ' + err.message, true) }
+});
+$('#reloadPresets').onclick = loadPresets;
+
+/* ================= show / playlist ================= */
+const fmt = s => { s = Math.max(0, Math.round(+s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') };
+const noExt = n => String(n || '').replace(/\.(fseq|mp3|m4a|wav|ogg|mp4)$/i, '');
+async function loadPlaylists(){
+  try{
+    const list = await api('/api/playlists');
+    const names = Array.isArray(list) ? list.map(x => typeof x === 'string' ? x : x.name).filter(Boolean) : [];
+    const want = local.get('playlist', null);
+    S.playlist = names.includes(want) ? want : names.includes('Christmas') ? 'Christmas' : names[0] || null;
+    $('#plSelect').innerHTML = names.map(n => `<option${n === S.playlist ? ' selected' : ''}>${esc(n)}</option>`).join('') || '<option>No playlists</option>';
+    loadPlaylistItems();
+  }catch(e){ toast('Could not load playlists', true) }
+}
+$('#plSelect').onchange = e => { S.playlist = e.target.value; local.set('playlist', S.playlist); loadPlaylistItems() };
+async function loadPlaylistItems(){
+  if (!S.playlist) return;
+  try{
+    const p = await api('/api/playlist/' + encodeURIComponent(S.playlist));
+    const items = [...(p.leadIn || []), ...(p.mainPlaylist || []), ...(p.leadOut || [])];
+    $('#plRepeat').checked = !!+p.repeat;
+    $('#plItems').innerHTML = items.length ? items.map(it => {
+      const n = noExt(it.sequenceName || it.mediaName || it.name || it.type);
+      return `<div class="item" data-seq="${esc(it.sequenceName || '')}"><span>🎵</span><span class="name">${esc(n)}</span><small>${it.duration ? fmt(it.duration) : ''}</small></div>`;
+    }).join('') : '<div class="empty">This playlist is empty.</div>';
+  }catch{ $('#plItems').innerHTML = '<div class="empty">Could not load this playlist.</div>' }
+}
+$('#plStart').onclick = async () => {
+  if (!S.playlist) return;
+  try{
+    await post('/api/playlist/' + encodeURIComponent(S.playlist) + '/start' + ($('#plRepeat').checked ? '/true' : ''));
+    toast('▶ ' + S.playlist); setTimeout(pollStatus, 500);
+  }catch(e){ toast('Start failed: ' + e.message, true) }
+};
+$('#plStopG').onclick = async () => { try{ await post('/api/playlists/stopgracefully'); toast('Stopping after this song'); setTimeout(pollStatus, 500) }catch(e){ toast(e.message, true) } };
+$('#plStop').onclick = async () => { try{ await post('/api/playlists/stop'); toast('Stopped'); setTimeout(pollStatus, 500) }catch(e){ toast(e.message, true) } };
+
+async function pollStatus(){
+  try{
+    const s = await api('/api/fppd/status');
+    $('#dot').className = 'dot ok';
+    $('#title').textContent = (s.host_description || '').trim() || 'WLED Remote';
+    $('#ktitle').textContent = (s.host_description || '').trim() || 'Light Show';
+    $('#kdot').className = 'dot ok';
+    const st = (s.status_name || 'idle').toLowerCase(), playing = st !== 'idle';
+    $('#stPill').textContent = st; $('#stPill').className = 'pill' + (playing ? ' on' : '');
+    $('#stMode').textContent = s.time ? s.timeStr || '' : '';
+    const seq = noExt(s.current_sequence), song = noExt(s.current_song);
+    $('#stTitle').textContent = seq || song || 'Nothing playing';
+    const pl = s.current_playlist || {};
+    $('#stSub').textContent = pl.playlist ? `${pl.playlist} · ${pl.index} of ${pl.count}` : 'Pick a playlist and press Start';
+    const done = +s.seconds_played || 0, left = +s.seconds_remaining || 0;
+    $('#stBar').style.width = (done + left) ? (done / (done + left) * 100) + '%' : '0';
+    $('#stEl').textContent = fmt(done); $('#stRem').textContent = '-' + fmt(left);
+    document.querySelectorAll('#plItems .item').forEach(el => el.classList.toggle('now', !!el.dataset.seq && el.dataset.seq === s.current_sequence));
+    const np = (s.scheduler && s.scheduler.nextPlaylist) || {};
+    $('#nextCard').style.display = np.playlistName ? '' : 'none';
+    $('#nextInfo').textContent = np.playlistName ? `${np.playlistName} — ${np.scheduledStartTimeStr || ''}` : '';
+  }catch{ $('#dot').className = 'dot'; $('#kdot').className = 'dot' }
+}
+async function pollActive(){
+  try{
+    const ms = await api('/api/overlays/models');
+    const on = (Array.isArray(ms) ? ms : []).filter(m => m.effectRunning || +m.isActive);
+    const b = $('#activeBadge');
+    b.style.display = on.length ? '' : 'none';
+    b.textContent = on.length ? `● ${on.length} lit` : '';
+  }catch{}
+}
+
+/* ================= nav & boot ================= */
+function go(v){
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'v-' + v));
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+  if (v === 'show') pollStatus();
+  if (v === 'presets') loadPresets();
+  if (v === 'kids') renderKidsSetup();
+  window.scrollTo(0, 0);
+}
+$('#nav').onclick = e => { const b = e.target.closest('button'); if (b) go(b.dataset.v) };
+
+/* ================= KIDS MODE ================= */
+const KIDS_FILE = 'fpp-wled-remote-kids.json';
+const ICONS = ['✨','⭐','🌟','💫','❄️','☃️','🔥','🌈','🎆','🕯️','⚡','🏃','☄️','💓','🧚','🎨','🌊','🍭','🫧','🌀','🐝','🎉','🎄','🎅','🦌','🎁','🔔','🍬','👻','🎃','🏠','🌳','💡','🪟','🚪','🚗','🌙','🦄','🐉','🚦'];
+const KIDS_DEFAULT = ['Solid Color','WLED - Twinkle','WLED - Fairy','WLED - Fireworks','WLED - Rainbow','WLED - Candle Multi','WLED - Chase','WLED - Meteor','WLED - Glitter','WLED - Lightning','WLED - Fire 2012','WLED - Breathe'];
+function autoIcon(n){
+  const s = String(n).toLowerCase();
+  const map = [[/solid/,'🎨'],[/twinkle|sparkle|glitter|star/,'✨'],[/fairy/,'🧚'],[/firework|starburst/,'🎆'],[/rainbow|colorloop/,'🌈'],
+    [/candle/,'🕯️'],[/fire|flame/,'🔥'],[/lightning|strobe/,'⚡'],[/meteor|comet/,'☄️'],[/chase|running|theater/,'🏃'],[/breath|heart/,'💓'],
+    [/snow|ice/,'❄️'],[/wave|ocean|lake|pacifica/,'🌊'],[/bounc|ball/,'🫧'],[/bee/,'🐝'],[/halloween|ghost/,'👻'],
+    [/^all$/,'🎄'],[/front.to.back/,'🌀'],[/left/,'⬅️'],[/right/,'➡️'],[/rake/,'🏠'],[/tree/,'🌳'],[/big|bulb|rbl/,'💡'],[/window|flat/,'🪟'],[/door|porch/,'🚪'],[/garage|garge/,'🚗'],[/^all$|house/,'🏠'],[/brow|upper|roof|front/,'🏠']];
+  for (const [re, ic] of map) if (re.test(s)) return ic;
+  return '✨';
+}
+const effDefaults = n => { const o = {}; for (const a of S.effects[n].args) o[a.name] = argDefault(a); return o };
+const K = {
+  cfg: null, mode: 'parent',
+  zones: new Set(local.get('kZones', [])), color: local.get('kColor', '#ff2020'), rainbow: local.get('kRainbow', false),
+  speed: local.get('kSpeed', 'mid'), bright: local.get('kBright', 'high'), effect: null,
+  hearts: new Set(local.get('kHearts', []))
+};
+function pinHash(pin){
+  // A small salted hash so the PIN isn't stored as plain digits. (crypto.subtle needs https, which the Pi doesn't use.)
+  let h = 2166136261 >>> 0; const s = (K.cfg.salt || '') + ':' + pin;
+  for (let r = 0; r < 3000; r++) for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i) + r; h = Math.imul(h, 16777619) >>> 0 }
+  return h.toString(16);
+}
+async function loadKids(){
+  let c = null;
+  try{ c = await api('/api/configfile/' + KIDS_FILE) }catch{}
+  c = (c && typeof c === 'object') ? c : {};
+  c.version = 1;
+  if (!c.salt) c.salt = Math.random().toString(36).slice(2, 10);
+  if (typeof c.maxBright !== 'number') c.maxBright = 70;
+  if (!Array.isArray(c.zones)) c.zones = S.groups.map(n => ({ name: n, label: pretty(n), icon: autoIcon(n) }));
+  if (!Array.isArray(c.effects)) c.effects = KIDS_DEFAULT.filter(n => S.effects[n])
+    .map(n => ({ name: n, label: effLabel(n), icon: autoIcon(n), values: effDefaults(n) }));
+  K.cfg = c;
+}
+const saveKids = () => post('/api/configfile/' + KIDS_FILE, K.cfg);
+const knownTargets = () => new Set([...S.props, ...S.groups, ...S.subs]);
+const kidZones = () => { const k = knownTargets(); return K.cfg.zones.filter(z => k.has(z.name)) };
+const kidEffects = () => K.cfg.effects.map((e, i) => ({ ...e, i })).filter(e => S.effects[e.name]);
+
+function setMode(m){
+  K.mode = m;
+  $('#kidsApp').hidden = m !== 'kids';
+  $('#parentApp').hidden = m === 'kids';
+  document.body.style.paddingBottom = m === 'kids' ? '0' : '';
+  document.body.style.background = m === 'kids' ? '#101735' : '';
+  $('#lockBtn').hidden = !K.cfg.pinHash;
+  if (m === 'kids'){ renderKids(); requestAnimationFrame(placeDot) }
+  window.scrollTo(0, 0);
+}
+
+function renderKids(){
+  const zs = kidZones();
+  K.zones = new Set([...K.zones].filter(n => zs.some(z => z.name === n)));
+  $('#kZones').innerHTML = zs.map(z => `<button class="ktile${K.zones.has(z.name) ? ' sel' : ''}" data-kz="${esc(z.name)}" type="button">
+    <span class="ki">${esc(z.icon)}</span>${esc(z.label)}</button>`).join('') || '<p class="knote">Ask a grown-up to pick some lights for you.</p>';
+  const es = kidEffects().sort((a, b) => (K.hearts.has(b.label) - K.hearts.has(a.label)) || a.i - b.i);
+  $('#kEffects').innerHTML = es.map(e => `<div class="ktile${K.effect === e.i ? ' sel' : ''}" data-ke="${e.i}" role="button" tabindex="0">
+    <button class="heart${K.hearts.has(e.label) ? ' on' : ''}" data-heart="${esc(e.label)}" type="button" aria-label="Favorite">${K.hearts.has(e.label) ? '❤️' : '🤍'}</button>
+    <span class="ki">${esc(e.icon)}</span>${esc(e.label)}</div>`).join('') || '<p class="knote">Ask a grown-up to pick some effects.</p>';
+  document.querySelectorAll('#kColorBtns [data-kc]').forEach(b => b.classList.toggle('sel', K.rainbow ? b.dataset.kc === 'rainbow' : b.dataset.kc === K.color));
+  document.querySelectorAll('#kSpeed [data-ks]').forEach(b => b.classList.toggle('sel', b.dataset.ks === K.speed));
+  document.querySelectorAll('#kBright [data-kb]').forEach(b => b.classList.toggle('sel', b.dataset.kb === K.bright));
+  $('#wheelDot').style.background = K.rainbow ? 'conic-gradient(red,yellow,lime,cyan,blue,magenta,red)' : K.color;
+}
+
+function kidValues(e){
+  const d = S.effects[e.name], v = { ...effDefaults(e.name), ...(e.values || {}) };
+  const firstColor = d.args.find(a => a.type === 'color');
+  const pal = d.args.find(a => a.name === 'palette');
+  if (K.rainbow && pal) v.palette = 'Rainbow';
+  else {
+    if (firstColor) v[firstColor.name] = K.color;
+    // Make the wheel color show: the Default palette ignores Color 1 on many effects.
+    if (pal && (v.palette === 'Default' || K.rainbow) && pal.contents.includes('* Color 1')) v.palette = '* Color 1';
+  }
+  const sp = d.args.find(a => a.name === 'Speed' && +a.max === 255);
+  if (sp) v.Speed = String({ slow: 40, mid: 128, fast: 230 }[K.speed]);
+  const frac = Math.max(0.05, K.cfg.maxBright / 100 * (K.bright === 'low' ? 0.35 : 1));
+  for (const a of d.args){
+    if (a.name === 'brightness') v[a.name] = String(Math.round(frac * (+a.max || 255)));
+    if (a.name === 'Brightness') v[a.name] = String(Math.round(frac * (+a.max || 100)));
+  }
+  return v;
+}
+let kidT, kidBusy = false, kidAgain = false;
+async function kidRunNow(){
+  const e = K.cfg.effects[K.effect]; if (!e || !S.effects[e.name]) return;
+  const zones = [...K.zones];
+  if (!zones.length){ toast('👆 Tap “Where?” first!'); const z = $('#kZones'); z.classList.remove('wiggle'); void z.offsetWidth; z.classList.add('wiggle'); return }
+  const [cmd, args] = buildCall(e.name, kidValues(e), zones, 'Enabled');
+  try{ await command(cmd, args); remember(zones); setTimeout(pollActive, 600) }
+  catch(err){ toast('The lights didn’t answer. Ask a grown-up.', true) }
+}
+function kidRun(){
+  clearTimeout(kidT);
+  kidT = setTimeout(async () => {
+    if (kidBusy){ kidAgain = true; return }
+    kidBusy = true; await kidRunNow(); kidBusy = false;
+    if (kidAgain){ kidAgain = false; kidRun() }
+  }, 150);
+}
+$('#kZones').addEventListener('click', e => {
+  const t = e.target.closest('[data-kz]'); if (!t) return;
+  const n = t.dataset.kz; K.zones.has(n) ? K.zones.delete(n) : K.zones.add(n);
+  local.set('kZones', [...K.zones]); renderKids();
+  if (K.effect !== null && K.zones.has(n)) kidRun();
+});
+$('#kEffects').addEventListener('click', e => {
+  const h = e.target.closest('[data-heart]');
+  if (h){ const l = h.dataset.heart; K.hearts.has(l) ? K.hearts.delete(l) : K.hearts.add(l); local.set('kHearts', [...K.hearts]); renderKids(); return }
+  const t = e.target.closest('[data-ke]'); if (!t) return;
+  K.effect = +t.dataset.ke; renderKids(); kidRun();
+});
+$('#kColorBtns').addEventListener('click', e => {
+  const b = e.target.closest('[data-kc]'); if (!b) return;
+  if (b.dataset.kc === 'rainbow') K.rainbow = true; else { K.rainbow = false; K.color = b.dataset.kc }
+  local.set('kColor', K.color); local.set('kRainbow', K.rainbow); renderKids(); placeDot();
+  if (K.effect !== null) kidRun();
+});
+$('#kSpeed').addEventListener('click', e => { const b = e.target.closest('[data-ks]'); if (!b) return; K.speed = b.dataset.ks; local.set('kSpeed', K.speed); renderKids(); if (K.effect !== null) kidRun() });
+$('#kBright').addEventListener('click', e => { const b = e.target.closest('[data-kb]'); if (!b) return; K.bright = b.dataset.kb; local.set('kBright', K.bright); renderKids(); if (K.effect !== null) kidRun() });
+$('#kStop').onclick = async () => {
+  try{ await stopEverything(); K.effect = null; renderKids(); toast('✋ Lights back to normal') }
+  catch{ toast('The lights didn’t answer. Ask a grown-up.', true) }
+};
+
+/* ---------- color wheel (hue around, color strength from the middle out) ---------- */
+function hsv(h, s, v){
+  const f = n => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)) };
+  return [f(5), f(3), f(1)].map(x => Math.round(x * 255));
+}
+const toHex = rgb => '#' + rgb.map(c => c.toString(16).padStart(2, '0')).join('');
+function hexToHS(hex){
+  const n = parseInt(hex.slice(1, 7), 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let h = 0;
+  if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return { h: (h * 60 + 360) % 360, s: mx ? d / mx : 0 };
+}
+(function drawWheel(){
+  const c = $('#wheel'), ctx = c.getContext('2d'), N = c.width, R = N / 2, img = ctx.createImageData(N, N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++){
+    const dx = x - R + .5, dy = y - R + .5, d = Math.hypot(dx, dy); if (d > R) continue;
+    const [r, g, b] = hsv((Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360, Math.min(1, d / R), 1), i = (y * N + x) * 4;
+    img.data[i] = r; img.data[i + 1] = g; img.data[i + 2] = b; img.data[i + 3] = d > R - 1.5 ? 255 * (R - d) / 1.5 : 255;
+  }
+  ctx.putImageData(img, 0, 0);
+})();
+function placeDot(){
+  const w = $('#wheelWrap').clientWidth, { h, s } = hexToHS(K.rainbow ? '#ffffff' : K.color), a = h * Math.PI / 180, r = s * w / 2;
+  Object.assign($('#wheelDot').style, { left: (w / 2 + Math.cos(a) * r) + 'px', top: (w / 2 + Math.sin(a) * r) + 'px' });
+}
+function wheelPick(ev){
+  const b = $('#wheel').getBoundingClientRect(), R = b.width / 2;
+  let dx = ev.clientX - b.left - R, dy = ev.clientY - b.top - R; const d = Math.hypot(dx, dy);
+  if (d > R){ dx *= R / d; dy *= R / d }
+  K.color = toHex(hsv((Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360, Math.min(1, Math.hypot(dx, dy) / R), 1));
+  K.rainbow = false; local.set('kColor', K.color); local.set('kRainbow', false);
+  renderKids(); placeDot(); if (K.effect !== null) kidRun();
+}
+let wheelDown = false;
+$('#wheel').addEventListener('pointerdown', e => { wheelDown = true; $('#wheel').setPointerCapture(e.pointerId); wheelPick(e) });
+$('#wheel').addEventListener('pointermove', e => { if (wheelDown) wheelPick(e) });
+['pointerup', 'pointercancel'].forEach(t => $('#wheel').addEventListener(t, () => wheelDown = false));
+addEventListener('resize', () => { if (K.mode === 'kids') placeDot() });
+
+/* ---------- PIN pad ---------- */
+let pinEntry = '';
+function showPin(){ pinEntry = ''; drawPin(); $('#pinMsg').textContent = 'Enter the 4-digit PIN'; $('#pinPad').hidden = false }
+function drawPin(){ document.querySelectorAll('#pinDots i').forEach((d, i) => d.classList.toggle('on', i < pinEntry.length)) }
+$('#unlockBtn').onclick = () => K.cfg.pinHash ? showPin() : setMode('parent');
+$('#pinKeys').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.k === 'cancel'){ $('#pinPad').hidden = true; return }
+  if (b.dataset.k === 'back'){ pinEntry = pinEntry.slice(0, -1); drawPin(); return }
+  if (pinEntry.length >= 4) return;
+  pinEntry += b.textContent; drawPin();
+  if (pinEntry.length === 4){
+    if (pinHash(pinEntry) === K.cfg.pinHash){ $('#pinPad').hidden = true; logIn() }
+    else { $('#pinMsg').textContent = 'Not quite. Try again.'; const d = $('#pinDots'); d.classList.remove('wiggle'); void d.offsetWidth; d.classList.add('wiggle'); pinEntry = ''; setTimeout(drawPin, 300) }
+  }
+});
+// This device stays logged in (until Log out) by remembering which PIN unlocked it.
+// A new PIN no longer matches, so changing the PIN logs out every other device.
+function logIn(){ local.set('loggedIn', K.cfg.pinHash); setMode('parent'); toast('Logged in on this device') }
+function logOut(){ local.set('loggedIn', null); setMode('kids') }
+const isLoggedIn = () => !!K.cfg.pinHash && local.get('loggedIn', null) === K.cfg.pinHash;
+$('#lockBtn').onclick = logOut;
+
+/* ---------- Kids setup (grown-up Kids tab) ---------- */
+const iconSelect = (cur, attr) => `<select ${attr} aria-label="Icon">${[...new Set([cur, ...ICONS])].map(i => `<option${i === cur ? ' selected' : ''}>${esc(i)}</option>`).join('')}</select>`;
+function renderKidsSetup(){
+  if (!K.cfg) return;
+  $('#kPinState').textContent = K.cfg.pinHash ? 'A PIN is set. Enter a new one below to change it.' : 'No PIN yet. Set one to turn on Kids mode.';
+  $('#kMax').value = K.cfg.maxBright; $('#kMaxVal').textContent = K.cfg.maxBright + '%';
+  // Zones: every group (on/off) plus any props the grown-up added.
+  const inCfg = new Map(K.cfg.zones.map(z => [z.name, z]));
+  const rows = [...S.groups.map(n => inCfg.get(n) || { name: n, label: pretty(n), icon: autoIcon(n), off: true }),
+    ...K.cfg.zones.filter(z => !S.groups.includes(z.name))];
+  $('#kZoneSetup').innerHTML = rows.map(z => `<div class="krowset" data-zn="${esc(z.name)}">
+    <input type="checkbox" ${z.off ? '' : 'checked'} aria-label="Kids can use">
+    ${iconSelect(z.icon, 'data-zi')}
+    <input type="text" class="grow" value="${esc(z.label)}" data-zl aria-label="Name kids see">
+    <span class="nm">${esc(pretty(z.name))}</span></div>`).join('');
+  $('#kAddProp').innerHTML = S.props.concat(S.subs).filter(n => !inCfg.has(n)).map(n => `<option value="${esc(n)}">${esc(pretty(n))}</option>`).join('');
+  $('#kEffSetup').innerHTML = K.cfg.effects.map((e, i) => `<div class="krowset" data-ei="${i}">
+    ${iconSelect(e.icon, 'data-eicon')}
+    <input type="text" class="grow" value="${esc(e.label)}" data-elabel aria-label="Name kids see">
+    <span class="nm">${esc(effLabel(e.name))}${S.effects[e.name] ? '' : ' (missing)'}</span>
+    <button class="small" data-eup="${i}" type="button" aria-label="Move up">↑</button>
+    <button class="small" data-edel="${i}" type="button" aria-label="Remove">✕</button></div>`).join('') || '<div class="empty">No effects yet.</div>';
+}
+function readKidsSetup(){
+  const zones = [];
+  document.querySelectorAll('#kZoneSetup [data-zn]').forEach(r => {
+    if (!r.querySelector('input[type=checkbox]').checked) return;
+    zones.push({ name: r.dataset.zn, icon: r.querySelector('[data-zi]').value, label: r.querySelector('[data-zl]').value.trim() || pretty(r.dataset.zn) });
+  });
+  K.cfg.zones = zones;
+  document.querySelectorAll('#kEffSetup [data-ei]').forEach(r => {
+    const e = K.cfg.effects[+r.dataset.ei]; if (!e) return;
+    e.icon = r.querySelector('[data-eicon]').value; e.label = r.querySelector('[data-elabel]').value.trim() || effLabel(e.name);
+  });
+  K.cfg.maxBright = +$('#kMax').value;
+}
+$('#kMax').oninput = e => $('#kMaxVal').textContent = e.target.value + '%';
+$('#kAddPropBtn').onclick = () => {
+  const n = $('#kAddProp').value; if (!n) return;
+  readKidsSetup(); K.cfg.zones.push({ name: n, label: pretty(n), icon: autoIcon(n) }); renderKidsSetup();
+};
+$('#kEffSetup').addEventListener('click', e => {
+  const up = e.target.closest('[data-eup]'), del = e.target.closest('[data-edel]');
+  if (!up && !del) return;
+  readKidsSetup();
+  const L = K.cfg.effects;
+  if (up){ const i = +up.dataset.eup; if (i > 0) [L[i - 1], L[i]] = [L[i], L[i - 1]] }
+  if (del) L.splice(+del.dataset.edel, 1);
+  K.effect = null; renderKidsSetup();
+});
+$('#kSaveAll').onclick = async () => {
+  readKidsSetup();
+  try{ await saveKids(); toast('Kids settings saved'); renderKidsSetup() }catch(e){ toast('Save failed: ' + e.message, true) }
+};
+$('#kSavePin').onclick = async () => {
+  const a = $('#kPin1').value.trim(), b = $('#kPin2').value.trim();
+  if (!/^\d{4}$/.test(a)) return toast('The PIN needs exactly 4 numbers', true);
+  if (a !== b) return toast('The two PINs don’t match', true);
+  readKidsSetup(); K.cfg.pinHash = pinHash(a);
+  try{ await saveKids(); $('#kPin1').value = $('#kPin2').value = ''; local.set('loggedIn', K.cfg.pinHash); $('#lockBtn').hidden = false; renderKidsSetup(); toast('PIN saved. This device stays logged in until you log out.') }
+  catch(e){ delete K.cfg.pinHash; toast('Save failed: ' + e.message, true) }
+};
+$('#kTry').onclick = () => { if (!K.cfg.pinHash) return toast('Set a PIN first, or anyone could get back in', true); logOut() };
+$('#addKidsBtn').onclick = async () => {
+  if (!K.cfg) return;
+  const n = S.effect, label = effLabel(n);
+  K.cfg.effects.push({ name: n, label, icon: autoIcon(n), values: curValues(n) });
+  try{ await saveKids(); toast(`👧 Added “${label}” to Kids mode`) }catch(e){ K.cfg.effects.pop(); toast('Save failed: ' + e.message, true) }
+};
+
+/* ================= boot ================= */
+(async () => {
+  await Promise.all([loadTargets(), loadEffects()]);
+  await loadKids();
+  setMode(!K.cfg.pinHash || isLoggedIn() ? 'parent' : 'kids');
+})();
+loadPlaylists(); loadPresets();
+pollStatus(); pollActive();
+setInterval(pollStatus, 2000);
+setInterval(pollActive, 5000);
+</script>
+</body>
+</html>
