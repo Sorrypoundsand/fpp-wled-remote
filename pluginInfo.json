@@ -6,8 +6,14 @@
   "homeURL": "https://github.com/sorrypoundsand/fpp-wled-remote",
   "srcURL": "https://github.com/sorrypoundsand/fpp-wled-remote.git",
   "bugURL": "https://github.com/sorrypoundsand/fpp-wled-remote/issues",
+  "iconURL": "https://raw.githubusercontent.com/Sorrypoundsand/fpp-wled-remote/main/icon.png",
   "versions": [
-    { "minFPPVersion": "10.3", "maxFPPVersion": "0", "branch": "main", "sha": "" }
+    {
+      "minFPPVersion": "10.3",
+      "maxFPPVersion": "0",
+      "branch": "main",
+      "sha": ""
+    }
   ],
   "privacy": {
     "summary": "A page served by FPP itself that talks only to this FPP. It loads nothing from the internet and sends nothing anywhere.",
