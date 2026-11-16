@@ -9,6 +9,15 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0a0e18">
 <title>WLED Remote</title>
+<script>
+  // Same rule as FPP's own pages: FPP's theme setting (passed in by app.php), else the device's setting.
+  (function () {
+    var override = document.documentElement.getAttribute('data-fpp-theme') || '';
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    function apply(){ document.documentElement.setAttribute('data-bs-theme', override === 'light' || override === 'dark' ? override : (mq.matches ? 'dark' : 'light')) }
+    apply(); if (mq.addEventListener) mq.addEventListener('change', apply);
+  })();
+</script>
 <!-- Home-screen and tab icon, served from the plugin folder by FPP's plugin.php -->
 <link rel="icon" type="image/png" sizes="256x256" href="plugin.php?plugin=fpp-wled-remote&amp;file=icon.png&amp;nopage=1">
 <link rel="apple-touch-icon" href="plugin.php?plugin=fpp-wled-remote&amp;file=icon.png&amp;nopage=1">
@@ -16,11 +25,24 @@
 :root{
   --bg:#0a0e18; --card:#121829; --card2:#1a2236; --line:#273150; --text:#e9edf7; --dim:#8a94b2;
   --accent:#ffc04a; --accent2:#ff7a45; --ok:#35d39a; --bad:#ff5a74; --r:16px;
+  --onaccent:#1d0f00; --hdr:rgba(10,14,24,.94); --dockbg:rgba(13,18,31,.97); --seltext:#ffe2a6; --selbg:rgba(255,192,74,.16);
+  --dangerbg:#3b1420; --dangerline:#62223a; --dangertext:#ffc0cd; --toast:#222b46; --errtext:#ffc6cf;
+  --scrim:rgba(5,8,18,.7); --swline:rgba(255,255,255,.15); --onbg:rgba(53,211,154,.14); --online:rgba(53,211,154,.5); --morebg:rgba(0,0,0,.35);
+  color-scheme:dark;
+}
+/* FPP's light theme (Settings → UI theme, or the phone's setting when FPP follows it) */
+:root[data-bs-theme="light"]{
+  --bg:#f3f5fa; --card:#ffffff; --card2:#edf0f6; --line:#d3d9e6; --text:#141a2b; --dim:#56607d;
+  --accent:#b86e00; --accent2:#d4542a; --ok:#15803d; --bad:#c81e3a;
+  --onaccent:#ffffff; --hdr:rgba(243,245,250,.94); --dockbg:rgba(255,255,255,.97); --seltext:#6e4200; --selbg:rgba(184,110,0,.12);
+  --dangerbg:#fde8ec; --dangerline:#f0b3c0; --dangertext:#a3122f; --toast:#ffffff; --errtext:#a3122f;
+  --scrim:rgba(20,26,43,.45); --swline:rgba(0,0,0,.2); --onbg:rgba(21,128,61,.1); --online:rgba(21,128,61,.45); --morebg:rgba(255,255,255,.75);
+  color-scheme:light;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 body{padding-bottom:calc(150px + env(safe-area-inset-bottom))}
-header{position:sticky;top:0;z-index:5;background:rgba(10,14,24,.94);backdrop-filter:blur(10px);
+header{position:sticky;top:0;z-index:5;background:var(--hdr);backdrop-filter:blur(10px);
   padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}
 header h1{font-size:17px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--bad);flex:none}
@@ -36,8 +58,8 @@ main{max-width:760px;margin:0 auto;padding:14px 16px}
 button{font:inherit;color:var(--text);background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 14px;cursor:pointer}
 button:active{transform:scale(.97)}
 button:disabled{opacity:.45}
-button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#1d0f00;border:none;font-weight:700}
-button.danger{background:#3b1420;border-color:#62223a;color:#ffc0cd}
+button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:var(--onaccent);border:none;font-weight:700}
+button.danger{background:var(--dangerbg);border-color:var(--dangerline);color:var(--dangertext)}
 button.small{padding:6px 10px;font-size:13px;border-radius:9px}
 button.link{background:none;border:none;color:var(--accent);padding:4px 6px;font-size:13px}
 input[type=text],input[type=search],select{font:inherit;color:var(--text);background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:10px 12px;width:100%}
@@ -48,7 +70,7 @@ input[type=color]{width:46px;height:40px;border:1px solid var(--line);border-rad
 /* targets */
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{border:1px solid var(--line);background:var(--card2);border-radius:99px;padding:7px 12px;font-size:14px;cursor:pointer;user-select:none}
-.chip.sel{background:rgba(255,192,74,.16);border-color:var(--accent);color:#ffe2a6}
+.chip.sel{background:var(--selbg);border-color:var(--accent);color:var(--seltext)}
 .chip.grp{font-weight:600}
 .sect{font-size:12px;color:var(--dim);margin:12px 0 6px;display:flex;gap:8px;align-items:center}
 .sect:first-child{margin-top:0}
@@ -57,7 +79,7 @@ input[type=color]{width:46px;height:40px;border:1px solid var(--line);border-rad
 .efflist{max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--card2)}
 .eff{padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:8px;align-items:center}
 .eff:last-child{border-bottom:none}
-.eff.sel{background:rgba(255,192,74,.14);color:#ffe2a6}
+.eff.sel{background:var(--selbg);color:var(--seltext)}
 .eff small{color:var(--dim);margin-left:auto}
 .quick{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px;scrollbar-width:none}
 .quick .chip{white-space:nowrap}
@@ -67,13 +89,13 @@ input[type=color]{width:46px;height:40px;border:1px solid var(--line);border-rad
 .colors{display:flex;gap:14px;flex-wrap:wrap}
 .colors .c{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;color:var(--dim)}
 .swatches{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.sw{width:30px;height:30px;border-radius:50%;border:2px solid rgba(255,255,255,.15);padding:0}
+.sw{width:30px;height:30px;border-radius:50%;border:2px solid var(--swline);padding:0}
 .toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;font-size:14px;color:var(--dim)}
 .toggle input{width:22px;height:22px;accent-color:var(--accent)}
 .effTitle{font-size:20px;font-weight:700;margin:0 0 2px}
 details summary{cursor:pointer;color:var(--dim);font-size:13px;margin-top:6px}
 /* bottom bar */
-.dock{position:fixed;left:0;right:0;bottom:0;z-index:6;background:rgba(13,18,31,.97);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--dockbg);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 .dock .actions{display:flex;gap:8px;padding:8px 12px 6px;max-width:760px;margin:0 auto}
 .dock .actions button{flex:1;padding:13px 8px;font-size:15px}
 #stopAll{font-weight:800;letter-spacing:.3px}
@@ -85,7 +107,7 @@ nav button.active{color:var(--accent)}
 .np{font-size:21px;font-weight:700;margin:4px 0 0;word-break:break-word}
 .sub{color:var(--dim);font-size:14px}
 .pill{display:inline-block;font-size:12px;padding:3px 10px;border-radius:99px;background:var(--card2);border:1px solid var(--line);text-transform:capitalize}
-.pill.on{background:rgba(53,211,154,.14);border-color:rgba(53,211,154,.5);color:var(--ok)}
+.pill.on{background:var(--onbg);border-color:var(--online);color:var(--ok)}
 .bar{height:6px;background:var(--card2);border-radius:99px;overflow:hidden;margin:12px 0 4px}
 .bar>div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .9s linear}
 .times{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
@@ -102,16 +124,16 @@ nav button.active{color:var(--accent)}
 .preset .stripe i{flex:1}
 .preset b{font-size:14px}
 .preset small{color:var(--dim);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.preset .more{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.35);border:none;border-radius:8px;padding:2px 8px;font-size:16px}
-#toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(12px);opacity:0;background:#222b46;border:1px solid var(--line);padding:10px 16px;border-radius:12px;z-index:9;transition:.2s;pointer-events:none;max-width:90vw;text-align:center;font-size:14px}
+.preset .more{position:absolute;top:4px;right:4px;background:var(--morebg);border:none;border-radius:8px;padding:2px 8px;font-size:16px}
+#toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(12px);opacity:0;background:var(--toast);color:var(--text);border:1px solid var(--line);padding:10px 16px;border-radius:12px;z-index:9;transition:.2s;pointer-events:none;max-width:90vw;text-align:center;font-size:14px}
 #toast.show{opacity:1;transform:translateX(-50%)}
-#toast.err{border-color:var(--bad);color:#ffc6cf}
+#toast.err{border-color:var(--bad);color:var(--errtext)}
 [hidden]{display:none!important}
 .effPick{display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin-top:4px;padding:12px 14px}
 .effPick small{display:block;color:var(--dim);font-size:12px}
 .effPick b{font-size:17px}
 .effPickGo{color:var(--accent);font-weight:600;white-space:nowrap}
-#effSheet{position:fixed;inset:0;z-index:15;background:rgba(5,8,18,.7);display:flex;align-items:flex-end;justify-content:center}
+#effSheet{position:fixed;inset:0;z-index:15;background:var(--scrim);display:flex;align-items:flex-end;justify-content:center}
 .sheetBox{width:100%;max-width:760px;height:min(85vh,720px);background:var(--card);border:1px solid var(--line);border-bottom:none;border-radius:20px 20px 0 0;
   padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
 .sheetHead{display:flex;align-items:center;justify-content:space-between;font-size:17px}
@@ -125,7 +147,7 @@ nav button.active{color:var(--accent)}
 .eff .tags{color:var(--accent);font-size:12px;margin-left:4px;letter-spacing:1px}
 .ftabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:none}
 .ftabs button{white-space:nowrap;padding:7px 11px;font-size:13px;border-radius:99px}
-.ftabs button.active{background:rgba(255,192,74,.16);border-color:var(--accent);color:#ffe2a6}
+.ftabs button.active{background:var(--selbg);border-color:var(--accent);color:var(--seltext)}
 .eff .star.on{color:var(--accent)}
 .eff .nm{flex:1;min-width:0}
 .pv{margin:8px 0 4px}
@@ -411,7 +433,36 @@ const local = {
 };
 // The page is served at <prefix>plugin.php?... ; the prefix also covers FPP's /proxy/<host>/ path.
 const BASE = location.pathname.replace(/plugin\.php.*$/, '').replace(/\/$/, '');
-const PRESET_FILE = 'fpp-wled-remote-presets.json';
+// Everything this plugin saves lives in one settings file in FPP's config folder, named the way
+// FPP expects (plugin.<repoName>). Older versions used two files; they're merged in on the first
+// save after the update and then removed.
+const SETTINGS_FILE = 'plugin.fpp-wled-remote.json';
+const OLD_FILES = { presets: 'fpp-wled-remote-presets.json', kids: 'fpp-wled-remote-kids.json' };
+// A config file, or null when FPP says it doesn't exist (404). Any other failure throws, so an
+// unreachable Pi is never mistaken for "no settings yet".
+async function readConfigFile(name){
+  const r = await fetch(BASE + '/api/configfile/' + name, { cache: 'no-store' });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const t = await r.text();
+  try { return JSON.parse(t) } catch { return null }
+}
+async function readSettings(){
+  const d = await readConfigFile(SETTINGS_FILE);
+  if (d && typeof d === 'object') return d;
+  const old = { version: 2 };
+  const p = await readConfigFile(OLD_FILES.presets); if (p && Array.isArray(p.presets)) old.presets = p.presets;
+  const k = await readConfigFile(OLD_FILES.kids); if (k && typeof k === 'object') old.kids = k;
+  if (old.presets || old.kids) Object.defineProperty(old, 'fromOldFiles', { value: true });
+  return old;
+}
+// Re-read just before writing, so saving presets never undoes a Kids-settings change made on another phone.
+async function writeSettings(change){
+  const cur = await readSettings(), wasOld = cur.fromOldFiles;
+  change(cur); cur.version = 2;
+  await post('/api/configfile/' + SETTINGS_FILE, cur);
+  if (wasOld) for (const f of Object.values(OLD_FILES)) api('/api/configfile/' + f, { method: 'DELETE' }).catch(() => {});
+}
 
 let toastT;
 function toast(msg, err){
@@ -787,13 +838,13 @@ setInterval(pvTick, 250);
 /* ================= presets (stored on the Pi) ================= */
 async function loadPresets(){
   try{
-    const d = await api('/api/configfile/' + PRESET_FILE);
-    S.presets = Array.isArray(d && d.presets) ? d.presets : [];
+    const d = await readSettings();
+    S.presets = Array.isArray(d.presets) ? d.presets : [];
   }catch{ S.presets = S.presets || [] }
   renderPresets();
 }
 async function savePresets(){
-  await post('/api/configfile/' + PRESET_FILE, { version: 1, presets: S.presets });
+  await writeSettings(c => { c.presets = S.presets });
 }
 function presetColors(p){
   const c = Object.entries(p.values || {}).filter(([k, v]) => /^#[0-9a-f]{6}/i.test(v) && /colou?r/i.test(k)).map(([, v]) => v.slice(0, 7));
@@ -931,7 +982,6 @@ function go(v){
 $('#nav').onclick = e => { const b = e.target.closest('button'); if (b) go(b.dataset.v) };
 
 /* ================= KIDS MODE ================= */
-const KIDS_FILE = 'fpp-wled-remote-kids.json';
 const ICONS = ['✨','⭐','🌟','💫','❄️','☃️','🔥','🌈','🎆','🕯️','⚡','🏃','☄️','💓','🧚','🎨','🌊','🍭','🫧','🌀','🐝','🎉','🎄','🎅','🦌','🎁','🔔','🍬','👻','🎃','🏠','🌳','💡','🪟','🚪','🚗','🌙','🦄','🐉','🚦'];
 const KIDS_DEFAULT = ['Solid Color','WLED - Twinkle','WLED - Fairy','WLED - Fireworks','WLED - Rainbow','WLED - Candle Multi','WLED - Chase','WLED - Meteor','WLED - Glitter','WLED - Lightning','WLED - Fire 2012','WLED - Breathe'];
 function autoIcon(n){
@@ -957,8 +1007,13 @@ function pinHash(pin){
   return h.toString(16);
 }
 async function loadKids(){
-  let c = null;
-  try{ c = await api('/api/configfile/' + KIDS_FILE) }catch{}
+  let c = null, ok = false;
+  for (let i = 0; i < 3 && !ok; i++){
+    try{ c = (await readSettings()).kids; ok = true }
+    catch{ await new Promise(r => setTimeout(r, 1500)) }
+  }
+  // Pi not answering: use the last Kids settings this device saw, so a locked tablet stays locked.
+  if (!ok) c = local.get('kidsCache', null);
   c = (c && typeof c === 'object') ? c : {};
   c.version = 1;
   if (!c.salt) c.salt = Math.random().toString(36).slice(2, 10);
@@ -967,8 +1022,9 @@ async function loadKids(){
   if (!Array.isArray(c.effects)) c.effects = KIDS_DEFAULT.filter(n => S.effects[n])
     .map(n => ({ name: n, label: effLabel(n), icon: autoIcon(n), values: effDefaults(n) }));
   K.cfg = c;
+  if (ok) local.set('kidsCache', c.pinHash ? { pinHash: c.pinHash, salt: c.salt, maxBright: c.maxBright, zones: c.zones, effects: c.effects } : null);
 }
-const saveKids = () => post('/api/configfile/' + KIDS_FILE, K.cfg);
+const saveKids = () => writeSettings(c => { c.kids = K.cfg }).then(() => local.set('kidsCache', K.cfg.pinHash ? K.cfg : null));
 const knownTargets = () => new Set([...S.props, ...S.groups, ...S.subs]);
 const kidZones = () => { const k = knownTargets(); return K.cfg.zones.filter(z => k.has(z.name)) };
 const kidEffects = () => K.cfg.effects.map((e, i) => ({ ...e, i })).filter(e => S.effects[e.name]);

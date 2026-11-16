@@ -98,11 +98,12 @@ The PIN is a kid lock, not security: anyone with your FPP web password can still
 
 ## Where things are saved
 
-- Presets: `config/fpp-wled-remote-presets.json`
-- Kids settings: `config/fpp-wled-remote-kids.json`
-- Kids' ❤️ favorites and the login on each device: that device's browser
+- Presets and Kids settings: `config/plugin.fpp-wled-remote.json` (one file, named the way FPP expects
+  plugin settings to be). Versions before Nov 2026 used two files; they're merged into this one on the
+  first save after updating, then removed.
+- Kids' ❤️ favorites, grown-up ☆ favorites and the login on each device: that device's browser
 
-Both config files are included in FPP backups. Uninstalling the plugin leaves them in place.
+The settings file is included in FPP backups. Uninstalling the plugin leaves it in place.
 
 ## How it talks to FPP
 
@@ -114,7 +115,7 @@ Every call goes to the FPP that served the page, and every change is a POST:
 | Solid color | `POST /api/command` → `Overlay Model Fill` [models, Enabled, #RRGGBB] |
 | Stop | `POST /api/command` → `Overlay Model Effect` [`--All Models--` / models, Enabled, `Stop Effects`] |
 | Playlists | `POST /api/playlist/{name}/start[/true]`, `POST /api/playlists/stopgracefully`, `POST /api/playlists/stop` |
-| Presets / Kids settings | `GET/POST /api/configfile/fpp-wled-remote-{presets,kids}.json` |
+| Presets / Kids settings | `GET/POST /api/configfile/plugin.fpp-wled-remote.json` |
 
 Effect controls are built from `GET /api/overlays/effects?full=true`. Groups come from
 `config/xlights-modelgroups.json`, because FPP leaves groups out of `/api/models`. See
@@ -130,6 +131,7 @@ node test/mock.js fpp-probe.txt www/index.html &
 node test/e2e.js
 node test/kids.js
 node test/ui.js
+node test/migrate.js
 ```
 
 ## License

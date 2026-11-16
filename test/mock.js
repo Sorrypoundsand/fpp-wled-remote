@@ -39,9 +39,12 @@ http.createServer((req, res) => {
     if (p === '/api/overlays/effects') return send(200, R.effFull);
     if (p === '/api/configfile/xlights-modelgroups.json') return send(200, groups);
     if (p === '/api/configfile/xlights-submodels.json') return send(200, subs);
-    if (p.startsWith('/api/configfile/fpp-wled-remote-')){
+    if (p === '/__store'){ if (req.method === 'POST'){ Object.assign(store, JSON.parse(body)); return send(200, 'ok') } return send(200, store) }
+    if (/^\/api\/configfile\/(plugin\.)?fpp-wled-remote/.test(p)){
       if (req.method === 'POST'){ store[p] = body; return send(200, { Status: 'OK' }) }
-      return store[p] ? send(200, store[p]) : send(404, { Status: 'Error', Message: 'not found' });
+      if (req.method === 'DELETE'){ delete store[p]; return send(200, { Status: 'OK' }) }
+      // FPP answers a missing file with limonade's HTML 404 page, not JSON
+      return store[p] ? send(200, store[p]) : send(404, '<html><body>unknown filename</body></html>', 'text/html');
     }
     if (p === '/api/command'){
       const c = JSON.parse(body);

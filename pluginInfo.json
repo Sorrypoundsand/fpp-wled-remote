@@ -23,6 +23,6 @@
     "remoteAccess": "none",
     "systemChanges": [],
     "closedCode": false,
-    "other": "Saves presets and Kids-mode settings as two JSON files in FPP's config folder (fpp-wled-remote-presets.json and fpp-wled-remote-kids.json). Kids' favorites are kept in each phone's browser."
+    "other": "Saves presets and Kids-mode settings in one file in FPP's config folder (plugin.fpp-wled-remote.json). Kids' favorites and each device's login are kept in that device's browser."
   }
 }

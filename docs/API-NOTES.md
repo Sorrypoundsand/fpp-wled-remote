@@ -84,7 +84,7 @@ FPP's `config/` folder, so presets are shared by every phone and included in FPP
 
 ## Serving the app and security
 
-- **Menu:** a plugin adds a Status-menu entry with a `status_menu.inc` file.
+- **Menu:** a plugin adds menu entries with a `menu.inc` file (one entry per menu area; see the template plugin).
 - A plugin lives in `/home/fpp/media/plugins/<name>/`. `plugin.php?plugin=<name>&file=<path>&nopage=1`
   serves a plain file from it (**checked: `.html` comes back as `text/plain`**, so the app goes through `app.php`), and `&page=<file>.php` runs a PHP page inside FPP's frame.
   `nopage=1` leaves out FPP's header and menus, so the app gets the whole screen.
