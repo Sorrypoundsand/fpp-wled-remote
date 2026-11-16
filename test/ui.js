@@ -13,6 +13,13 @@ const OUT = process.env.OUT || __dirname, URL = 'http://localhost:8765/plugin.ph
   await p.click('#effList [data-fav="WLED - Fireworks"]'); await p.click('#effList [data-fav="WLED - Aurora"]');
   await p.screenshot({ path: OUT + '/u1-sheet.png' });
   await p.click('#effList .effsec + .eff [data-fav]', { trial: true });
+  // filter tabs
+  const count = async f => { await p.click(`#effTabs [data-f="${f}"]`); await p.waitForTimeout(150); return p.$$eval('#effList .eff', e => e.length) };
+  const tabs = { all: await count('all'), row: await count('row'), matrix: await count('matrix'), music: await count('music'), new: await count('new'), fav: await count('fav') };
+  await p.click('#effTabs [data-f="matrix"]'); await p.waitForTimeout(200);
+  const thumbs = await p.$$eval('#effList img.thumb', e => e.length);
+  await p.screenshot({ path: OUT + '/u3-matrix.png' });
+  await p.click('#effTabs [data-f="all"]'); await p.waitForTimeout(150);
   await p.click('#effList [data-e="WLED - Aurora"] .nm'); await p.waitForTimeout(300);
   const sheetClosed = !(await p.isVisible('#effSheet'));
   const picked = await p.textContent('#effPickName');
@@ -22,6 +29,6 @@ const OUT = process.env.OUT || __dirname, URL = 'http://localhost:8765/plugin.ph
   await p.screenshot({ path: OUT + '/u2-effects.png' });
   await p.reload(); await p.waitForSelector('[data-t="Rakes"]'); await p.waitForTimeout(400);
   const favsKept = await p.$$eval('#quick .chip', els => els.slice(0, 2).map(e => e.textContent));
-  console.log({ errs, label1, sheetOpen, sheetClosed, picked, chips, favsKept });
+  console.log({ tabs, thumbs, desc: await p.textContent('#effDesc').catch(()=>''), errs, label1, sheetOpen, sheetClosed, picked, chips, favsKept });
   await b.close();
 })();

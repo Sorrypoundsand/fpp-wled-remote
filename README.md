@@ -78,8 +78,8 @@ build can update the last one. That key is only for installing by hand, not for 
 
 ## Using it
 
-**Effects:** tap groups or props, pick an effect (tap **All effects ›** for the full list, and ☆ to
-make one a favorite), press **Run effect**. A live preview shows the real pixels of the first light
+**Effects:** tap groups or props, pick an effect (tap **All effects ›** for the full list with previews,
+filtered by ⋮ In a row, ▦ Matrix, ♫ Music or ✨ New, and ☆ to make one a favorite), press **Run effect**. A live preview shows the real pixels of the first light
 you picked. With **Live** on, every change
 goes to the lights right away. Under **Advanced**, *Replace* takes over those lights, and *Blend*
 lets the show show through wherever the effect is dark.
@@ -135,3 +135,8 @@ node test/ui.js
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+Effect descriptions and preview animations in `www/effect-info.json` come from
+[WLED-Docs](https://github.com/wled/WLED-Docs) (MIT, © Christian Schwinne) and
+[WLED-Utils](https://github.com/scottrbailey/WLED-Utils) (MIT, © Artacus), rebuilt with
+`tools/build-effect-info.py`. The effects themselves are WLED's, as built into FPP.

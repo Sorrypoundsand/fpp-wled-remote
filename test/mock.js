@@ -12,6 +12,10 @@ http.createServer((req, res) => {
     const u = new URL(req.url, 'http://x'), p = u.pathname;
     const send = (code, data, type = 'application/json') => { res.writeHead(code, { 'Content-Type': type }); res.end(typeof data === 'string' ? data : JSON.stringify(data)) };
     if (req.method !== 'GET') log.push({ m: req.method, p: decodeURIComponent(p), body });
+    if (p === '/plugin.php' && u.searchParams.get('file')){
+      const f = require('path').join(require('path').dirname(APP), '..', u.searchParams.get('file').replace(/\.\./g, ''));
+      return fs.existsSync(f) ? send(200, fs.readFileSync(f, 'utf8'), f.endsWith('.json') ? 'application/json' : 'application/octet-stream') : send(404, 'nope', 'text/plain');
+    }
     if (p === '/plugin.php') return send(200, fs.readFileSync(APP, 'utf8'), 'text/html');
     if (p === '/__log') return send(200, log);
     if (p === '/api/fppd/status') return send(200, R.status);

@@ -117,7 +117,15 @@ nav button.active{color:var(--accent)}
 .sheetHead{display:flex;align-items:center;justify-content:space-between;font-size:17px}
 #effSheet .efflist{flex:1;max-height:none;min-height:0}
 .effsec{padding:8px 12px 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);background:var(--card)}
-.eff .star{background:none;border:none;padding:4px 8px;font-size:20px;line-height:1;color:var(--dim)}
+.eff .star{background:none;border:none;padding:4px 8px;font-size:20px;line-height:1;color:var(--dim);flex:none}
+.eff .thumb{width:84px;height:30px;flex:none;border-radius:6px;background:#000;object-fit:contain;image-rendering:pixelated}
+.eff .thumb.none{display:grid;place-items:center;color:var(--dim);font-size:16px}
+.eff .txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.eff .txt small{margin:0;color:var(--dim);font-size:12px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.eff .tags{color:var(--accent);font-size:12px;margin-left:4px;letter-spacing:1px}
+.ftabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:none}
+.ftabs button{white-space:nowrap;padding:7px 11px;font-size:13px;border-radius:99px}
+.ftabs button.active{background:rgba(255,192,74,.16);border-color:var(--accent);color:#ffe2a6}
 .eff .star.on{color:var(--accent)}
 .eff .nm{flex:1;min-width:0}
 .pv{margin:8px 0 4px}
@@ -217,8 +225,16 @@ nav button.active{color:var(--accent)}
   <div class="sheetBox" role="dialog" aria-label="Choose an effect">
     <div class="sheetHead"><b>Choose an effect</b><button class="small" id="closeEff" type="button">Done</button></div>
     <input type="search" id="effSearch" placeholder="Search 200+ effects…">
-    <label class="toggle" style="padding:2px 0">Show sound-reactive (♪) effects <input type="checkbox" id="showSound"></label>
+    <div class="ftabs" id="effTabs" role="tablist">
+      <button data-f="all" type="button">All</button>
+      <button data-f="fav" type="button">★ Favorites</button>
+      <button data-f="row" type="button">⋮ In a row</button>
+      <button data-f="matrix" type="button">▦ Matrix</button>
+      <button data-f="music" type="button">♫ Music</button>
+      <button data-f="new" type="button">✨ New</button>
+    </div>
     <div class="efflist" id="effList"></div>
+    <p class="hint" style="margin:0;font-size:11px">Descriptions and previews: WLED-Docs and WLED-Utils (MIT).</p>
   </div>
 </div>
 
@@ -267,6 +283,7 @@ nav button.active{color:var(--accent)}
   <div class="card" id="ctlCard">
     <h2>3 · Adjust <span class="sp"></span><label class="toggle" style="padding:0;text-transform:none;letter-spacing:0;font-size:13px">Live <input type="checkbox" id="live" checked></label></h2>
     <div class="effTitle" id="effTitle">Pick an effect</div>
+    <p class="hint" id="effDesc" style="margin:0 0 4px"></p>
     <div class="pv">
       <canvas id="pv" aria-label="Live preview of the selected lights"></canvas>
       <small id="pvLabel">Pick some lights to see a live preview</small>
@@ -505,19 +522,63 @@ function renderQuick(){
     `<span class="chip${n === S.effect ? ' sel' : ''}" data-e="${esc(n)}">${S.favs.includes(n) ? '★ ' : ''}${esc(effLabel(n))}</span>`).join('');
   $('#effPickName').textContent = S.effect ? effLabel(S.effect) : 'None';
 }
+/* ---------- effect info: type, description and preview for each effect ---------- */
+// Built by tools/build-effect-info.py; loaded from the plugin folder the first time the list opens.
+const FPP_INFO = {
+  [SOLID]: { k: 'row', d: 'One steady color on every light.' },
+  'Color Fade': { k: 'row', d: 'Fades in to a color, then out again.' },
+  'Bars': { k: 'matrix', d: 'Colored bars sliding up, down, left or right.' },
+  'Text': { k: 'matrix', d: 'Scrolling text, best on a matrix.' },
+  'Blink': { k: 'row', d: 'Blinks between two colors.' }
+};
+S.info = {}; S.filter = local.get('effFilter', 'all');
+let infoLoad = null;
+function loadEffectInfo(){
+  if (!infoLoad) infoLoad = api('/plugin.php?plugin=fpp-wled-remote&file=www/effect-info.json&nopage=1')
+    .then(d => { S.info = (d && d.effects) || {}; if (!$('#effSheet').hidden) renderEffList(); renderControls() })
+    .catch(() => { infoLoad = null });
+  return infoLoad;
+}
+function effInfo(n){ return FPP_INFO[n] || S.info[effLabel(n)] || null }
+function effMusic(n){ const i = effInfo(n); return n.startsWith('WLED♪') || !!(i && i.m) }
+function effMatches(n, f){
+  const i = effInfo(n) || { k: 'row' };
+  if (f === 'fav') return S.favs.includes(n);
+  if (f === 'row') return i.k === 'row' || i.k === 'both';
+  if (f === 'matrix') return i.k === 'matrix' || i.k === 'both';
+  if (f === 'music') return effMusic(n);
+  if (f === 'new') return !!i.n;
+  return true;
+}
+function effTags(n){
+  const i = effInfo(n); if (!i) return '';
+  return (i.k === 'matrix' ? '▦' : i.k === 'both' ? '⋮▦' : '⋮') + (effMusic(n) ? '♫' : '') + (i.n ? '✨' : '');
+}
 function renderEffList(){
-  const q = $('#effSearch').value.trim().toLowerCase(), sound = $('#showSound').checked;
-  const ok = n => (sound || !n.startsWith('WLED♪')) && n.toLowerCase().includes(q);
-  const row = n => `<div class="eff${n === S.effect ? ' sel' : ''}" data-e="${esc(n)}">
-    <span class="nm">${esc(effLabel(n))}</span><small>${n.startsWith('WLED♪') ? '♪ sound' : n.startsWith('WLED') ? '' : n === SOLID ? 'solid' : 'FPP'}</small>
-    <button class="star${S.favs.includes(n) ? ' on' : ''}" data-fav="${esc(n)}" type="button" aria-label="Favorite">${S.favs.includes(n) ? '★' : '☆'}</button></div>`;
-  const favs = S.favs.filter(n => S.effects[n] && ok(n)), all = S.effNames.filter(ok);
+  const q = $('#effSearch').value.trim().toLowerCase(), f = S.filter;
+  document.querySelectorAll('#effTabs [data-f]').forEach(b => b.classList.toggle('active', b.dataset.f === f));
+  const at = $('#effTabs .active'); if (at) $('#effTabs').scrollLeft = Math.max(0, at.offsetLeft - 40);
+  const ok = n => effMatches(n, f) && (effLabel(n).toLowerCase().includes(q) || ((effInfo(n) || {}).d || '').toLowerCase().includes(q));
+  const row = n => {
+    const i = effInfo(n) || {};
+    return `<div class="eff${n === S.effect ? ' sel' : ''}" data-e="${esc(n)}">
+      ${i.g ? `<img class="thumb" alt="" loading="lazy" src="data:image/gif;base64,${i.g}">` : `<span class="thumb none">${n === SOLID ? '🎨' : '✨'}</span>`}
+      <span class="txt"><span class="nm">${esc(effLabel(n))}<span class="tags">${effTags(n)}</span></span>${i.d ? `<small>${esc(i.d)}</small>` : ''}</span>
+      <button class="star${S.favs.includes(n) ? ' on' : ''}" data-fav="${esc(n)}" type="button" aria-label="Favorite">${S.favs.includes(n) ? '★' : '☆'}</button></div>`;
+  };
+  const all = S.effNames.filter(ok);
+  const favs = f === 'all' ? S.favs.filter(n => S.effects[n] && ok(n)) : [];
   let h = '';
   if (favs.length) h += '<div class="effsec">★ Favorites</div>' + favs.map(row).join('') + '<div class="effsec">All effects</div>';
   h += all.map(row).join('');
-  $('#effList').innerHTML = all.length ? h : '<div class="empty">No effects match</div>';
+  const none = { fav: 'No favorites yet. Tap ☆ next to an effect.', music: 'No music effects match.', new: 'No new effects match.' }[f] || 'No effects match';
+  $('#effList').innerHTML = all.length ? h : `<div class="empty">${none}</div>`;
 }
-function openEffSheet(){ $('#effSheet').hidden = false; renderEffList(); const el = $('#effList .eff.sel'); if (el) el.scrollIntoView({ block: 'center' }) }
+$('#effTabs').addEventListener('click', e => {
+  const b = e.target.closest('[data-f]'); if (!b) return;
+  S.filter = b.dataset.f; local.set('effFilter', S.filter); renderEffList(); $('#effList').scrollTop = 0;
+});
+function openEffSheet(){ $('#effSheet').hidden = false; loadEffectInfo(); renderEffList(); const el = $('#effList .eff.sel'); if (el) el.scrollIntoView({ block: 'center' }) }
 function closeEffSheet(){ $('#effSheet').hidden = true }
 $('#openEff').onclick = openEffSheet;
 $('#closeEff').onclick = closeEffSheet;
@@ -535,7 +596,6 @@ $('#effList').onclick = e => {
   const x = e.target.closest('[data-e]'); if (x){ pickEffect(x.dataset.e); closeEffSheet() }
 };
 $('#effSearch').oninput = renderEffList;
-$('#showSound').onchange = renderEffList;
 
 /* ---------- controls built from the effect's own description ---------- */
 const NICE = { BufferMapping: 'Direction', brightness: 'Brightness', palette: 'Palette', color1: 'Color 1', color2: 'Color 2', color3: 'Color 3' };
@@ -562,6 +622,8 @@ function showVal(a, v){
 function renderControls(){
   const d = S.effects[S.effect]; if (!d){ $('#controls').innerHTML = ''; return }
   $('#effTitle').textContent = effLabel(d.name);
+  const di = effInfo(d.name);
+  $('#effDesc').textContent = di ? (di.d || '') + (effTags(d.name) ? '  ' + effTags(d.name) : '') : '';
   const v = curValues(d.name);
   // Order: brightness first, then sliders, colors, palette, switches, the rest.
   const order = a => /^brightness$/i.test(a.name) ? 0 : (a.type === 'range' || a.type === 'int') ? 1 : a.type === 'color' ? 2 : a.name === 'palette' ? 3 : a.type === 'bool' ? 4 : 5;
@@ -1138,6 +1200,7 @@ $('#addKidsBtn').onclick = async () => {
   setMode(!K.cfg.pinHash || isLoggedIn() ? 'parent' : 'kids');
 })();
 loadPlaylists(); loadPresets();
+setTimeout(loadEffectInfo, 3000);
 pollStatus(); pollActive();
 setInterval(pollStatus, 2000);
 setInterval(pollActive, 5000);
