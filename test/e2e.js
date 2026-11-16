@@ -19,7 +19,7 @@ const SP = process.env.OUT || __dirname;
   await p.click('[data-sw="#00c832"]'); await p.waitForTimeout(400);
   await p.screenshot({ path: SP + '/s1-effects.png', fullPage: true });
   // search + solid color
-  await p.fill('#effSearch', 'solid'); await p.click('#effList [data-e="Solid Color"]'); await p.waitForTimeout(400);
+  await p.click('#openEff'); await p.fill('#effSearch', 'solid'); await p.click('#effList [data-e="Solid Color"]'); await p.waitForTimeout(400);
   await p.fill('#presetName', 'Green glow'); await p.click('#savePresetBtn'); await p.waitForTimeout(400);
   await p.click('#quick [data-e="WLED - Fireworks"]'); await p.waitForTimeout(400);
   await p.fill('#presetName', 'Fireworks show'); await p.click('#savePresetBtn'); await p.waitForTimeout(400);
@@ -35,7 +35,7 @@ const SP = process.env.OUT || __dirname;
   // try every non-sound WLED effect, checking arg counts against the real descriptions
   await p.click('nav [data-v=effects]');
   const names = await p.$$eval('#effList [data-e]', els => els.map(e => e.dataset.e));
-  await p.fill('#effSearch', '');
+  await p.click('#openEff'); await p.fill('#effSearch', '');
   const all = await p.$$eval('#effList [data-e]', els => els.map(e => e.dataset.e));
   for (const n of all){ await p.$eval(`#effList [data-e="${n.replace(/"/g,'\\"')}"]`, el => el.click()); await p.click('#goBtn'); }
   await p.waitForTimeout(800);

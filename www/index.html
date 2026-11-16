@@ -107,6 +107,22 @@ nav button.active{color:var(--accent)}
 #toast.show{opacity:1;transform:translateX(-50%)}
 #toast.err{border-color:var(--bad);color:#ffc6cf}
 [hidden]{display:none!important}
+.effPick{display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin-top:4px;padding:12px 14px}
+.effPick small{display:block;color:var(--dim);font-size:12px}
+.effPick b{font-size:17px}
+.effPickGo{color:var(--accent);font-weight:600;white-space:nowrap}
+#effSheet{position:fixed;inset:0;z-index:15;background:rgba(5,8,18,.7);display:flex;align-items:flex-end;justify-content:center}
+.sheetBox{width:100%;max-width:760px;height:min(85vh,720px);background:var(--card);border:1px solid var(--line);border-bottom:none;border-radius:20px 20px 0 0;
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
+.sheetHead{display:flex;align-items:center;justify-content:space-between;font-size:17px}
+#effSheet .efflist{flex:1;max-height:none;min-height:0}
+.effsec{padding:8px 12px 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);background:var(--card)}
+.eff .star{background:none;border:none;padding:4px 8px;font-size:20px;line-height:1;color:var(--dim)}
+.eff .star.on{color:var(--accent)}
+.eff .nm{flex:1;min-width:0}
+.pv{margin:8px 0 4px}
+#pv{display:block;width:100%;height:36px;border-radius:10px;background:#000;image-rendering:pixelated}
+.pv small{color:var(--dim);font-size:12px}
 /* ---------- grown-up extras ---------- */
 .lockbtn{font-size:13px;padding:7px 11px;border-radius:99px}
 .krowset{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
@@ -196,6 +212,16 @@ nav button.active{color:var(--accent)}
   <div class="kdock"><button class="kstop" id="kStop" type="button">✋ STOP</button></div>
 </div>
 
+<!-- Effect chooser sheet -->
+<div id="effSheet" hidden>
+  <div class="sheetBox" role="dialog" aria-label="Choose an effect">
+    <div class="sheetHead"><b>Choose an effect</b><button class="small" id="closeEff" type="button">Done</button></div>
+    <input type="search" id="effSearch" placeholder="Search 200+ effects…">
+    <label class="toggle" style="padding:2px 0">Show sound-reactive (♪) effects <input type="checkbox" id="showSound"></label>
+    <div class="efflist" id="effList"></div>
+  </div>
+</div>
+
 <!-- PIN pad for grown-ups -->
 <div id="pinPad" hidden>
   <div class="box">
@@ -232,14 +258,19 @@ nav button.active{color:var(--accent)}
   <div class="card">
     <h2>2 · Effect</h2>
     <div class="quick" id="quick"></div>
-    <input type="search" id="effSearch" placeholder="Search 200+ effects…">
-    <div class="efflist" id="effList" style="margin-top:8px"></div>
-    <label class="toggle" style="margin-top:6px">Show sound-reactive (♪) effects <input type="checkbox" id="showSound"></label>
+    <button class="effPick" id="openEff" type="button">
+      <span class="grow"><small>Effect</small><b id="effPickName">Twinkle</b></span>
+      <span class="effPickGo">All effects ›</span>
+    </button>
   </div>
 
   <div class="card" id="ctlCard">
     <h2>3 · Adjust <span class="sp"></span><label class="toggle" style="padding:0;text-transform:none;letter-spacing:0;font-size:13px">Live <input type="checkbox" id="live" checked></label></h2>
     <div class="effTitle" id="effTitle">Pick an effect</div>
+    <div class="pv">
+      <canvas id="pv" aria-label="Live preview of the selected lights"></canvas>
+      <small id="pvLabel">Pick some lights to see a live preview</small>
+    </div>
     <div id="controls"></div>
     <details>
       <summary>Advanced</summary>
@@ -466,25 +497,43 @@ async function loadEffects(){
   renderQuick(); renderEffList(); renderControls();
 }
 const effLabel = n => n.replace(/^WLED♪? - /, '');
+// Grown-up favorites (per device): first in the quick chips and the chooser.
+S.favs = local.get('favs', []);
 function renderQuick(){
-  $('#quick').innerHTML = QUICK.filter(n => S.effects[n]).map(n =>
-    `<span class="chip${n === S.effect ? ' sel' : ''}" data-e="${esc(n)}">${esc(effLabel(n))}</span>`).join('');
+  const names = [...S.favs, ...QUICK.filter(n => !S.favs.includes(n))].filter(n => S.effects[n]);
+  $('#quick').innerHTML = names.map(n =>
+    `<span class="chip${n === S.effect ? ' sel' : ''}" data-e="${esc(n)}">${S.favs.includes(n) ? '★ ' : ''}${esc(effLabel(n))}</span>`).join('');
+  $('#effPickName').textContent = S.effect ? effLabel(S.effect) : 'None';
 }
 function renderEffList(){
   const q = $('#effSearch').value.trim().toLowerCase(), sound = $('#showSound').checked;
-  const names = S.effNames.filter(n => (sound || !n.startsWith('WLED♪')) && n.toLowerCase().includes(q));
-  $('#effList').innerHTML = names.map(n => `<div class="eff${n === S.effect ? ' sel' : ''}" data-e="${esc(n)}">
-    <span>${esc(effLabel(n))}</span><small>${n.startsWith('WLED♪') ? '♪ sound' : n.startsWith('WLED') ? '' : n === SOLID ? 'solid' : 'FPP'}</small></div>`).join('')
-    || '<div class="empty">No effects match</div>';
+  const ok = n => (sound || !n.startsWith('WLED♪')) && n.toLowerCase().includes(q);
+  const row = n => `<div class="eff${n === S.effect ? ' sel' : ''}" data-e="${esc(n)}">
+    <span class="nm">${esc(effLabel(n))}</span><small>${n.startsWith('WLED♪') ? '♪ sound' : n.startsWith('WLED') ? '' : n === SOLID ? 'solid' : 'FPP'}</small>
+    <button class="star${S.favs.includes(n) ? ' on' : ''}" data-fav="${esc(n)}" type="button" aria-label="Favorite">${S.favs.includes(n) ? '★' : '☆'}</button></div>`;
+  const favs = S.favs.filter(n => S.effects[n] && ok(n)), all = S.effNames.filter(ok);
+  let h = '';
+  if (favs.length) h += '<div class="effsec">★ Favorites</div>' + favs.map(row).join('') + '<div class="effsec">All effects</div>';
+  h += all.map(row).join('');
+  $('#effList').innerHTML = all.length ? h : '<div class="empty">No effects match</div>';
 }
+function openEffSheet(){ $('#effSheet').hidden = false; renderEffList(); const el = $('#effList .eff.sel'); if (el) el.scrollIntoView({ block: 'center' }) }
+function closeEffSheet(){ $('#effSheet').hidden = true }
+$('#openEff').onclick = openEffSheet;
+$('#closeEff').onclick = closeEffSheet;
+$('#effSheet').addEventListener('click', e => { if (e.target.id === 'effSheet') closeEffSheet() });
 function pickEffect(n){
   if (!S.effects[n]) return;
   S.effect = n; local.set('effect', n);
   renderQuick(); renderEffList(); renderControls();
-  const el = $('#effList .eff.sel'); if (el) el.scrollIntoView({ block: 'nearest' });
   if (S.running && $('#live').checked) scheduleSend();
 }
-$('#quick').onclick = $('#effList').onclick = e => { const x = e.target.closest('[data-e]'); if (x) pickEffect(x.dataset.e) };
+$('#quick').onclick = e => { const x = e.target.closest('[data-e]'); if (x) pickEffect(x.dataset.e) };
+$('#effList').onclick = e => {
+  const f = e.target.closest('[data-fav]');
+  if (f){ const n = f.dataset.fav; S.favs = S.favs.includes(n) ? S.favs.filter(x => x !== n) : [...S.favs, n]; local.set('favs', S.favs); renderEffList(); renderQuick(); return }
+  const x = e.target.closest('[data-e]'); if (x){ pickEffect(x.dataset.e); closeEffSheet() }
+};
 $('#effSearch').oninput = renderEffList;
 $('#showSound').onchange = renderEffList;
 
@@ -629,6 +678,49 @@ $('#stopAll').onclick = async () => {
   try{ await stopEverything(); toast('■ All effects stopped') }
   catch(e){ toast('Stop failed: ' + e.message, true) }
 };
+
+/* ---------- live preview: the first selected light's real pixels ---------- */
+let pvBusy = false;
+const pvLabel = t => { if ($('#pvLabel').textContent !== t) $('#pvLabel').textContent = t };
+function pvClear(){ const c = $('#pv'); c.getContext('2d').clearRect(0, 0, c.width, c.height) }
+async function pvTick(){
+  if (pvBusy || document.hidden || K.mode !== 'parent' || !$('#v-effects').classList.contains('active')) return;
+  const sel = targets();
+  if (!sel.length){ pvClear(); return pvLabel('Pick some lights to see a live preview') }
+  const m = sel[0];
+  pvBusy = true;
+  try{
+    const r = await fetch(BASE + '/api/overlays/model/' + encodeURIComponent(m) + '/data/raw', { cache: 'no-store' });
+    if (!r.ok) throw new Error('none');
+    const w = +r.headers.get('X-FPP-Model-Width'), h = +r.headers.get('X-FPP-Model-Height'), bpp = +r.headers.get('X-FPP-Model-BytesPerPixel') || 3;
+    const px = new Uint8Array(await r.arrayBuffer());
+    if (!w || !h || px.length < w * h * bpp) throw new Error('none');
+    pvDraw(px, w, h, bpp);
+    pvLabel(`Live: ${pretty(m)}${sel.length > 1 ? ` (first of ${sel.length})` : ''}`);
+  }catch{ pvClear(); pvLabel(`Preview of ${pretty(m)} starts once an effect runs on it`) }
+  finally{ pvBusy = false }
+}
+function pvDraw(px, w, h, bpp){
+  const c = $('#pv'), dpr = window.devicePixelRatio || 1, W = Math.round(c.clientWidth * dpr);
+  // A strip shows as a bar; a matrix or a 2D group keeps its shape, up to 140px tall.
+  const cssH = h === 1 ? 36 : Math.max(36, Math.min(140, c.clientWidth * h / w));
+  if (c.style.height !== cssH + 'px') c.style.height = cssH + 'px';
+  const H = Math.round(cssH * dpr);
+  if (c.width !== W || c.height !== H){ c.width = W; c.height = H }
+  const off = pvDraw.off || (pvDraw.off = document.createElement('canvas'));
+  off.width = w; off.height = h;
+  const octx = off.getContext('2d'), img = octx.createImageData(w, h);
+  for (let i = 0, j = 0; i < w * h; i++, j += bpp){
+    const wh = bpp === 4 ? px[j + 3] : 0;
+    img.data[i * 4] = Math.min(255, px[j] + wh); img.data[i * 4 + 1] = Math.min(255, px[j + 1] + wh);
+    img.data[i * 4 + 2] = Math.min(255, px[j + 2] + wh); img.data[i * 4 + 3] = 255;
+  }
+  octx.putImageData(img, 0, 0);
+  const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(off, 0, 0, W, H);
+}
+setInterval(pvTick, 250);
 
 /* ================= presets (stored on the Pi) ================= */
 async function loadPresets(){

@@ -62,7 +62,9 @@ scp -r fpp-wled-remote fpp@<your-pi-ip>:/home/fpp/media/plugins/
 
 ## Using it
 
-**Effects:** tap groups or props, pick an effect, press **Run effect**. With **Live** on, every change
+**Effects:** tap groups or props, pick an effect (tap **All effects ›** for the full list, and ☆ to
+make one a favorite), press **Run effect**. A live preview shows the real pixels of the first light
+you picked. With **Live** on, every change
 goes to the lights right away. Under **Advanced**, *Replace* takes over those lights, and *Blend*
 lets the show show through wherever the effect is dark.
 
@@ -111,6 +113,7 @@ and the Playwright scripts click through the app:
 node test/mock.js fpp-probe.txt www/index.html &
 node test/e2e.js
 node test/kids.js
+node test/ui.js
 ```
 
 ## License

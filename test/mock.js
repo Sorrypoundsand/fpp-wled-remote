@@ -19,6 +19,19 @@ http.createServer((req, res) => {
     if (p === '/api/playlist/Christmas') return send(200, R.christmas);
     if (p === '/api/models') return send(200, R.simple);
     if (p === '/api/overlays/models') return send(200, R.ovm);
+    // Fake moving pixels for the live preview: a strip for props, a 2D grid for groups.
+    let mm = p.match(/^\/api\/overlays\/model\/([^/]+)\/data\/raw$/);
+    if (mm){
+      const name = decodeURIComponent(mm[1]), grid = groups.modelgroups.some(g => g.Name === name);
+      const w = grid ? 48 : 60, h = grid ? 14 : 1, t = Date.now() / 120, buf = Buffer.alloc(w * h * 3);
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+        const i = (y * w + x) * 3, hue = ((x + y * 2 + t) % w) / w * 6, f = n => Math.round(255 * Math.max(0, Math.min(1, Math.abs((hue + n) % 6 - 3) - 1)));
+        const tw = Math.sin(x * 12.9 + y * 78.2 + t) > 0.6 ? 1 : 0.35;
+        buf[i] = f(0) * tw; buf[i + 1] = f(4) * tw; buf[i + 2] = f(2) * tw;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'X-FPP-Model-Width': w, 'X-FPP-Model-Height': h, 'X-FPP-Model-BytesPerPixel': 3 });
+      return res.end(buf);
+    }
     if (p === '/api/overlays/effects') return send(200, R.effFull);
     if (p === '/api/configfile/xlights-modelgroups.json') return send(200, groups);
     if (p === '/api/configfile/xlights-submodels.json') return send(200, subs);
