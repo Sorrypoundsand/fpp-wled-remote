@@ -52,6 +52,22 @@ Download this repository (**Code → Download ZIP**), unzip it, rename the folde
 scp -r fpp-wled-remote fpp@<your-pi-ip>:/home/fpp/media/plugins/
 ```
 
+## Android app (optional)
+
+A small Android app that opens the remote full screen, with no browser bar, and signs in to FPP for
+you, so there's no password box. It also keeps kids inside the remote, because there's no address bar
+to leave it with.
+
+1. On your Android phone, download
+   [WLED-Remote.apk](https://github.com/Sorrypoundsand/fpp-wled-remote/releases/download/android-app/WLED-Remote.apk)
+   and open it. The first time, Android asks you to allow installing apps from your browser.
+2. Enter your Pi's address and FPP web password. Long-press the app icon → **Settings** to change them.
+
+The app shows the plugin from your Pi, so plugin updates reach it without reinstalling. The plugin
+must be installed on the Pi first. The APK is built by GitHub from the `android/` folder
+(`.github/workflows/build-android-app.yml`). It's signed with a key kept in this repository so every
+build can update the last one. That key is only for installing by hand, not for a store release.
+
 ## Before you start
 
 - **FPP 10.3 or newer.** The WLED effects and some of the calls the app uses are new in 10.3.

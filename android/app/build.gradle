@@ -1,0 +1,44 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.sorrypoundsand.fppwledremote'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.sorrypoundsand.fppwledremote'
+        minSdk 24
+        // 34 keeps the normal status bar (35 forces edge-to-edge drawing).
+        targetSdk 34
+        // Each GitHub build gets a higher number, so a new APK installs over the old one.
+        versionCode((System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int)
+        versionName '1.0.' + (System.getenv('GITHUB_RUN_NUMBER') ?: '0')
+    }
+
+    // A fixed key, kept in the repository, so every build can update the app already on a phone.
+    // It is only for installing the APK by hand. Don't use it for a Play Store release.
+    signingConfigs {
+        sideload {
+            storeFile file('sideload.keystore')
+            storePassword 'fppwledremote'
+            keyAlias 'sideload'
+            keyPassword 'fppwledremote'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.sideload
+        }
+        debug {
+            signingConfig signingConfigs.sideload
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
